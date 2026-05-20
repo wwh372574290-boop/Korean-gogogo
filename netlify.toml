@@ -1,0 +1,4 @@
+[[redirects]]
+  from = "/"
+  to = "/seoul_restaurants.html"
+  status = 302

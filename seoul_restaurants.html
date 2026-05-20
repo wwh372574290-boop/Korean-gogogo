@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>首尔美食 & 购物地图 - 45 家</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  #topbar {
+    position: absolute; top: 0; left: 0; right: 340px; height: 56px;
+    background: #fff; border-bottom: 1px solid #ddd; z-index: 500;
+    display: flex; align-items: center; gap: 6px;
+    padding: 0 14px; overflow-x: auto; white-space: nowrap;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  #topbar .tb-label { font-size: 12px; color: #888; margin-right: 4px; flex-shrink: 0; }
+  .cat-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 20px;
+    border: 1.5px solid #ddd; background: #fff;
+    font-size: 13px; cursor: pointer; user-select: none;
+    transition: all 0.15s; flex-shrink: 0;
+  }
+  .cat-chip:hover { border-color: #999; }
+  .cat-chip.active { color: white; border-color: transparent; }
+  .cat-chip .cnt { font-size: 11px; opacity: 0.75; }
+  .cat-chip.all { background: #333; color: white; border-color: #333; }
+  .cat-chip.all.inactive { background: #fff; color: #333; border-color: #ddd; }
+  .cat-chip .cat-img {
+    width: 28px; height: 24px;
+    object-fit: cover; object-position: center top;
+    flex-shrink: 0; display: inline-block;
+    border-radius: 4px;
+  }
+
+  #map { position: absolute; top: 56px; left: 0; right: 340px; bottom: 0; }
+  #sidebar {
+    position: absolute; top: 0; right: 0; bottom: 0; width: 340px;
+    background: #fafafa; border-left: 1px solid #ddd; overflow-y: auto;
+    box-sizing: border-box; padding: 16px;
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { color: #888; font-size: 12px; margin-bottom: 12px; }
+  .legend { background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; border: 1px solid #eee; }
+  .legend div { margin: 4px 0; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+  .star { font-size: 16px; }
+  .group { margin-bottom: 14px; }
+  .group h3 { font-size: 13px; margin: 0 0 6px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 4px; cursor: pointer; user-select: none; display: flex; align-items: center; gap: 6px; }
+  .group h3::before { content: "▾"; font-size: 10px; color: #999; transition: transform .15s; display: inline-block; }
+  .group.collapsed h3::before { transform: rotate(-90deg); }
+  .group.collapsed .item { display: none !important; }
+  .group h3 .gcount { margin-left: auto; font-size: 11px; color: #999; font-weight: normal; }
+  .copy-btn { display: inline-block; margin-left: 6px; padding: 0 6px; font-size: 11px; line-height: 16px; background: #eee; border: none; border-radius: 3px; cursor: pointer; color: #666; vertical-align: middle; }
+  .copy-btn:hover { background: #d0e6ff; color: #0066cc; }
+  .copy-btn.copied { background: #c8f5c8; color: #1a7f1a; }
+  .item { font-size: 12px; padding: 6px; cursor: pointer; border-radius: 4px; line-height: 1.4; display: flex; gap: 8px; align-items: center; }
+  .item:hover { background: #eef5ff; }
+  .item-thumb { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; flex-shrink: 0; background: #ddd; }
+  .item-text { flex: 1; min-width: 0; }
+  .item .name { font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .item .desc { color: #777; font-size: 11px; }
+  .cat-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+  /* 自定义热门景区图标 (大星) */
+  .hot-icon {
+    background: #ff3b30; color: white; border-radius: 50%;
+    width: 36px !important; height: 36px !important;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: bold;
+    box-shadow: 0 0 0 3px rgba(255,59,48,0.3), 0 2px 6px rgba(0,0,0,0.3);
+    border: 2px solid #fff;
+  }
+  /* 酒店图标 */
+  .hotel-icon {
+    background: linear-gradient(135deg, #2c3e50, #4a6fa5); color: white;
+    border-radius: 8px;
+    width: 40px !important; height: 40px !important;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 0 0 3px rgba(74,111,165,0.35), 0 3px 8px rgba(0,0,0,0.4);
+    border: 2px solid #fff;
+  }
+  /* 南山塔图标 */
+  .tower-icon {
+    background: linear-gradient(135deg, #c0392b, #f39c12); color: white;
+    border-radius: 50%;
+    width: 44px !important; height: 44px !important;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 0 0 3px rgba(243,156,18,0.4), 0 3px 10px rgba(192,57,43,0.5);
+    border: 2px solid #fff;
+  }
+  /* 餐厅小图标 */
+  .rest-icon {
+    border-radius: 50%; width: 28px !important; height: 28px !important;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 700; font-size: 13px;
+    border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    cursor: pointer;
+  }
+
+  /* hover 浮窗 */
+  #tooltip {
+    position: absolute; z-index: 9999; pointer-events: none;
+    background: #fff; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    width: 260px; padding: 0; display: none; overflow: hidden;
+    border: 1px solid #eee;
+    font-size: 12px;
+  }
+  #tooltip img { width: 100%; height: 180px; object-fit: cover; display: block; background:#eee; }
+  #tooltip .tt-body { padding: 10px 12px; }
+  #tooltip .tt-title { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+  #tooltip .tt-area { color: #2a73d9; font-size: 11px; margin-bottom: 6px; }
+  #tooltip .tt-desc { color: #444; font-size: 12px; line-height: 1.5; white-space: pre-line; }
+  #tooltip .no-img { height: 60px; display: flex; align-items: center; justify-content: center; color: #aaa; background: #f5f5f5; font-size: 12px; }
+
+  /* 点击弹窗也带图 */
+  .leaflet-popup-content { margin: 0 !important; }
+  .pop-card { width: 240px; }
+  .pop-card img { width: 100%; height: 160px; object-fit: cover; display: block; }
+  .pop-card .pc-body { padding: 8px 12px 10px; }
+  .pop-card .pc-title { font-weight: 700; font-size: 14px; }
+  .pop-card .pc-area { color: #2a73d9; font-size: 11px; margin-bottom: 4px; }
+  .pop-card .pc-desc { font-size: 12px; color: #444; line-height: 1.5; white-space: pre-line; }
+
+  /* 大浮窗 modal */
+  #modal-mask {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+    z-index: 10000; display: none;
+    align-items: center; justify-content: center;
+    animation: fadein 0.18s ease;
+  }
+  #modal-mask.show { display: flex; }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  #modal {
+    background: #fff; border-radius: 12px; overflow: hidden;
+    width: 90%; max-width: 720px; max-height: 90vh;
+    display: flex; flex-direction: row;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    position: relative;
+    animation: pop 0.22s cubic-bezier(.2,1.3,.5,1);
+  }
+  @keyframes pop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  #modal .m-img-wrap {
+    flex: 1 1 55%; background: #000;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 320px; max-height: 90vh;
+    position: relative;
+  }
+  #modal .m-img-wrap img { width: 100%; height: 100%; max-height: 90vh; object-fit: contain; display: block; }
+  #modal .m-img-wrap .no-img-big {
+    color: #888; font-size: 14px;
+  }
+  .m-nav-btn {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(0,0,0,0.55); color: #fff; border: none;
+    font-size: 22px; line-height: 1; cursor: pointer; z-index: 3;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s; user-select: none;
+  }
+  .m-nav-btn:hover { background: rgba(0,0,0,0.85); }
+  .m-nav-prev { left: 12px; }
+  .m-nav-next { right: 12px; }
+  .m-counter {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.6); color: #fff;
+    padding: 3px 12px; border-radius: 12px; font-size: 12px; z-index: 3;
+    pointer-events: none;
+  }
+  #modal .m-body {
+    flex: 1 1 45%; padding: 24px 22px; overflow-y: auto;
+    display: flex; flex-direction: column;
+  }
+  #modal .m-id {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    color: white; font-size: 12px; font-weight: 700;
+    align-self: flex-start; margin-bottom: 10px;
+  }
+  #modal .m-title { font-size: 22px; font-weight: 700; margin: 0 0 6px; }
+  #modal .m-area { color: #2a73d9; font-size: 13px; margin-bottom: 4px; }
+  #modal .m-short { color: #888; font-size: 13px; margin-bottom: 18px; }
+  #modal .m-desc { color: #333; font-size: 14px; line-height: 1.7; white-space: pre-line; }
+  #modal .m-actions { display: flex; gap: 8px; margin-top: 16px; }
+  #modal .m-act-btn {
+    flex: 1; padding: 9px 12px; border-radius: 8px;
+    border: 1.5px solid #ddd; background: #fff;
+    font-size: 13px; cursor: pointer; transition: all 0.15s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    font-weight: 500;
+  }
+  #modal .m-act-btn:hover { border-color: #999; background: #f7f7f7; }
+  #modal .m-act-btn.on-like { background: #ffe5ec; border-color: #ff3b6c; color: #d63060; }
+  #modal .m-act-btn.on-hide { background: #f0f0f0; border-color: #666; color: #444; }
+  /* 喜欢/隐藏 特殊 chip */
+  .cat-chip.special { border-style: dashed; }
+  .cat-chip.special-liked.active { background: #ff3b6c; border-color: #ff3b6c; color: #fff; }
+  .cat-chip.special-hidden.active { background: #555; border-color: #555; color: #fff; }
+  /* 侧栏 item 角标 */
+  .item .item-flag {
+    position: absolute; top: 4px; right: 6px; font-size: 12px;
+    line-height: 1; pointer-events: none;
+  }
+  .item { position: relative; }
+  .item.is-hidden { opacity: 0.6; }
+  #modal-close {
+    position: absolute; top: 10px; right: 12px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(0,0,0,0.55); color: white;
+    border: none; cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2; transition: background 0.15s;
+  }
+  #modal-close:hover { background: rgba(0,0,0,0.85); }
+
+  @media (max-width: 640px) {
+    #modal { flex-direction: column; max-width: 95%; }
+    #modal .m-img-wrap { max-height: 40vh; min-height: 200px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <span class="tb-label">类别筛选：</span>
+</div>
+
+<div id="map"></div>
+<div id="tooltip"></div>
+
+<!-- 大浮窗 -->
+<div id="modal-mask">
+  <div id="modal">
+    <button id="modal-close" aria-label="关闭">✕</button>
+    <div class="m-img-wrap"><img id="m-img" src="" alt=""></div>
+    <div class="m-body">
+      <span class="m-id" id="m-id"></span>
+      <h2 class="m-title" id="m-title"></h2>
+      <button class="copy-btn" id="m-copy" title="复制店名" style="margin:4px 0 8px;">📋 复制店名</button>
+      <div class="m-area" id="m-area"></div>
+      <div class="m-short" id="m-short"></div>
+      <div class="m-desc" id="m-desc"></div>
+      <div class="m-actions" id="m-actions"></div>
+    </div>
+  </div>
+</div>
+
+<div id="sidebar">
+  <h1>首尔美食 & 购物 · 64 家</h1>
+  <div class="sub">铲屎老夏 · 推荐 · 鼠标悬停查看详情</div>
+
+  <div class="legend">
+    <div id="hotel-link" style="cursor:pointer; padding:4px; border-radius:4px; transition:background 0.15s;">
+      <span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:linear-gradient(135deg,#2c3e50,#4a6fa5);text-align:center;line-height:18px;font-size:11px;">🏨</span>
+      <span style="font-weight:600;">Hotel Bliss Myeongdong</span>
+      <span style="color:#888;font-size:11px;">(我的酒店 · 点击定位)</span>
+    </div>
+    <div id="namsan-link" style="cursor:pointer; padding:4px; border-radius:4px; transition:background 0.15s; margin-top:4px;">
+      <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#c0392b,#f39c12);text-align:center;line-height:18px;font-size:11px;">🗼</span>
+      <span style="font-weight:600;">N Seoul Tower 南山塔</span>
+      <span style="color:#888;font-size:11px;">(核心景点 · 点击查看攻略)</span>
+    </div>
+    <div><span class="star">⭐</span> 热门景区 (明/圣/弘/梨/新)</div>
+    <div style="border-top:1px solid #eee; margin-top:6px; padding-top:6px; font-size:11px; color:#888;">餐厅按类别上色，顶部可筛选</div>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// 热门景区
+const hotspots = [
+  { name: "明洞 Myeongdong",  lat: 37.5636, lng: 126.9826, icon: "明",
+    short: "购物美食街区", desc: "首尔最具代表性的购物美食街区\n免税店 / 化妆品 / 小吃 / 名牌齐聚" },
+  { name: "圣水洞 Seongsu",   lat: 37.5446, lng: 127.0560, icon: "圣",
+    short: "首尔布鲁克林",
+    img: "图片/23d6ac0c-933e-49fa-b63b-1e3360e594e1.jpg",
+    desc: "号称\"首尔布鲁克林\"的潮流街区\n旧厂房改造的咖啡/买手店/快闪\nDior、Tamburins、Musinsa、Olive Young N 等\n网红打卡 + 美食 + 购物一站集合" },
+  { name: "弘大 Hongdae",     lat: 37.5563, lng: 126.9237, icon: "弘",
+    short: "年轻文化中心", desc: "弘益大学一带，年轻人聚集地\n街头表演 / Live House / 平价美食" },
+  { name: "梨泰院 Itaewon",   lat: 37.5345, lng: 126.9947, icon: "梨",
+    short: "国际化街区", desc: "首尔最国际化的街区\n各国料理 / 酒吧 / 异国风情" },
+  { name: "新沙洞 Sinsa",     lat: 37.5172, lng: 127.0205, icon: "新",
+    short: "林荫道 + 设计师店", desc: "新沙洞林荫道 (가로수길)\n咖啡 / 设计师小店 / 时尚买手店" },
+  { name: "北村 Bukchon",     lat: 37.5826, lng: 126.9836, icon: "北",
+    short: "韩屋村", desc: "传统韩屋村 (북촌한옥마을)\n景福宫 / 昌德宫 / 三清洞 周边" }
+];
+
+const areaColor = {
+  "明洞": "#e74c3c",
+  "圣水洞": "#27ae60",
+  "弘大": "#3498db",
+  "梨泰院": "#9b59b6",
+  "新沙洞": "#e67e22",
+  "北村": "#34495e",
+  "多分店": "#7f8c8d",
+  "位置待确认": "#95a5a6"
+};
+
+const areaCenter = {
+  "明洞":   [37.5636, 126.9826],
+  "圣水洞": [37.5446, 127.0560],
+  "弘大":   [37.5563, 126.9237],
+  "梨泰院": [37.5345, 126.9947],
+  "新沙洞": [37.5172, 127.0205],
+  "北村":   [37.5826, 126.9836],
+  "多分店": [37.5500, 126.9900]
+};
+
+// 18 家餐厅 (含图 + 详细介绍, 提取自原图)
+// 图片路径用 encodeURI 处理
+const IMG = (f) => "图片/" + f;
+const IMG2 = (f) => "图片/1/" + f;
+const IMG4 = (f) => "图片/3/" + f;
+const IMG5 = (f) => "图片/4/" + f;
+const restaurantsRaw = [
+  { id: 1,  name: "이가네갈비", area: "明洞",   cat: "韩餐主食", short: "辣排骨锅",
+    img: IMG("7d859b98-4873-433e-b577-661f43c3f303.jpg"),
+    desc: "明洞超级火的辣炖排骨锅\n排骨入口即脱骨 汤汁适合拌饭\n周日不营业 勿跑空" },
+  { id: 2,  name: "oats", area: "弘大",   cat: "咖啡甜品", short: "维也纳咖啡 + 司康",
+    img: IMG("dfb86eb7-e412-4b2d-b5d2-6c3d9078776d.jpg"),
+    desc: "首尔三巨头之一！\n维也纳确实不错！搭配黄油司康\n不过不喜甜的可能会不爱" },
+  { id: 3,  name: "vetiver", area: "圣水洞", cat: "咖啡甜品", short: "黑芝麻冰淇淋华夫饼",
+    img: IMG("f24cd79c-785e-4d28-96bd-f02f57753ecc.jpg"),
+    desc: "黑芝麻控都给我去吃好嘛！！\n搭配咖啡还是华夫饼都很👍\n个人觉得不会很甜腻！好吃！" },
+  { id: 4,  name: "단골손님", area: "新沙洞", cat: "韩餐主食", short: "毛蚶生牛肉拌饭",
+    img: IMG("71bf8f2b-12c2-4fc6-af43-46da8da6cf39.jpg"),
+    desc: "份量超大的毛蚶生牛肉拌饭\n口感偏微辣 足够三四个女生吃\n位置有点难找 在2楼" },
+  { id: 5,  name: "Nongdam", area: "梨泰院", cat: "西餐", short: "辣奶油意面",
+    img: IMG("51e5e856-6e6e-4b2d-a192-1baabdc54de9.jpg"),
+    desc: "梨泰院一家很隐秘的西餐店\n辣奶油意面的口感真的好神奇！\n可以选择双拼！比较出片！" },
+  { id: 6,  name: "홍대족발", area: "弘大",   cat: "韩餐主食", short: "猪蹄",
+    img: IMG("df7ed3d4-2363-4347-9eed-ffff5941c2b0.jpg"),
+    desc: "朋友说是她弘大最喜欢的一顿🤣\n选了甜辣 + 蒜蓉双拼，甜辣更好吃\n份量好大！猪蹄好嫩！糯唧唧的" },
+  { id: 7,  name: "대한곱창", area: "明洞",   cat: "烤肉烧烤", short: "烤肠 / 牛肠",
+    img: IMG("d3b4bd43-17c8-4816-aad3-8b5bbe03888b.jpg"),
+    desc: "华莎同款！xhs 超火爆的烤肠店\n可以选择拼盘，油唧唧的太绝了\n我个人觉得还是牛肠最好吃！" },
+  { id: 8,  name: "계자람", area: "圣水洞", cat: "烤肉烧烤", short: "烤鸡 / 辣鸡爪",
+    img: IMG("e26005ef-4dae-4c53-9947-fee6ee150540.jpg"),
+    desc: "超多韩国明星打卡的一家烤鸡店\n冲着辣鸡爪去的！味道还不错\n等位注意！店员根本不看排队顺序😑" },
+  { id: 9,  name: "조조칼국수", area: "圣水洞", cat: "韩餐主食", short: "蛤蜊刀削面",
+    img: IMG("0168c847-7945-4d05-894a-83149dd0347d.jpg"),
+    desc: "圣水洞排队王蛤蜊刀削面\n店里一共就三道菜，份量巨大\n三个人以上的话可以全点" },
+  { id: 10, name: "솔솔 Solsot", area: "弘大", cat: "韩餐主食", short: "石锅牛排饭",
+    img: IMG("5283f6ab-7853-4905-8c55-d78ec4264517.jpg"),
+    desc: "点了鱿鱼和牛排的，果然还得是牛排\n牛肉处理的很嫩！搭配酱汁和蛋液👍\n最后还可以喝一下锅巴汤～" },
+  { id: 11, name: "乌达里家", area: "明洞", cat: "韩餐主食", short: "酱蟹定食",
+    img: IMG("a431de9e-2a67-4426-a0d1-502176d50f40.jpg"),
+    desc: "明洞很火的酱蟹，地理位置很好\n店内点餐是定食的形式\n酱蟹搭配米饭真的太下饭了👍" },
+  { id: 12, name: "bhc", area: "多分店", cat: "炸鸡", short: "炸鸡",
+    img: IMG("ff8143da-7452-4369-b128-76ce95f83168.jpg"),
+    desc: "无须多言！每次来小韩都要吃！\n炸鸡和芝士球都好好吃😭\n胃口不大的可以沟通要双拼口味" },
+  { id: 13, name: "super coffee", area: "弘大", cat: "饮品", short: "草莓牛奶",
+    img: IMG("9e0e4aa2-9de4-43f2-8a32-1f82bbb24a8f.jpg"),
+    desc: "颜值还是非常不错的，适合打卡\n有点像淡版旺仔 + 新鲜草莓\n倒牛奶的时候注意不要溅出来" },
+  { id: 14, name: "Milky shop", area: "明洞", cat: "咖啡甜品", short: "焦糖黄油饼干",
+    img: IMG("4b5d45b9-582c-4e78-a4b2-df6bf4e46fb4.jpg"),
+    desc: "适合做伴手礼的焦糖黄油饼干\n一盒价格不算便宜！\n基本吃一块就有点甜腻啦～" },
+  { id: 15, name: "standard bread", area: "圣水洞", cat: "咖啡甜品", short: "网红吐司",
+    img: IMG("4a898c08-7e69-4d36-bddf-e234cbc7c885.jpg"),
+    desc: "圣水洞超火爆的网红吐司\n比想象中要好吃很多！外带品类不多\n如果能排上队的话可以店内堂食" },
+  { id: 16, name: "Cliff", area: "梨泰院", cat: "饮品", short: "咖啡 / 景观位",
+    img: IMG("44717fd1-9bfd-4c25-a3c7-aed08592cc8f.jpg"),
+    desc: "咖啡一般！主要是为了场景\n三楼的座位有涩谷即视感\n边上就是梨泰院蓝调最美机位" },
+  { id: 17, name: "mega", area: "多分店", cat: "饮品", short: "爆米花沙冰",
+    img: IMG("17c2d587-845f-4521-a171-d586607d6fd9.jpg"),
+    desc: "来小韩必喝之一！分店很多\n爆米花沙冰算是比较特别的\n但喝多很甜腻，其他品类比较常规" },
+  { id: 18, name: "compose", area: "多分店", cat: "饮品", short: "红豆年糕奶昔",
+    img: IMG("8e584ba9-9aab-4ad7-882c-bd04598079ed.jpg"),
+    desc: "和 mega 一样也有很多分店\n对比两家 xhs 上的网红款单品\n我可能更爱它们家的红豆年糕奶昔" },
+
+  // ===== 第二批 (来自 图片/1) =====
+  { id: 19, name: "mom's touch", area: "多分店", cat: "炸鸡", short: "싸이버거 / 韩式汉堡",
+    img: IMG2("081127f9-c2a9-4e81-a0e0-68df96a27040.jpg"),
+    desc: "妈妈摸门永存！싸이버거最❤！\n爱吃汉堡的人不会坏到哪里去！\n薯条 / 炸鸡 / 汉堡都很出彩\nno brand 也可以 (更便宜)" },
+  { id: 20, name: "MilkyShop 圣水店", area: "圣水洞", cat: "咖啡甜品", short: "黄油焦糖饼干",
+    img: IMG2("0cf0bc6c-4fe5-4d43-a8a3-685620b33a74.jpg"),
+    desc: "圣水洞前三🔥的黄油饼干！\n特别适合当伴手礼 2w 韩币/盒\n口感不会很甜 特别酥 tree 裹了焦糖酱\n目前有：焦糖 / 花生 / 牛奶口味～" },
+  { id: 21, name: "rafre fruit", area: "圣水洞", cat: "咖啡甜品", short: "首尔林草莓蛋糕 Top1",
+    img: IMG2("112d71ef-4080-4930-a7e1-6e1b87d56bf1.jpg"),
+    desc: "首尔林草莓小蛋糕 Top1 人气\n价格偏贵顶不住真的貌美！\n樱花祭限定也是被我吃上了！\n草莓拿铁不推荐！芭菲也一般～\n最爱的还是草莓蛋糕！" },
+  { id: 22, name: "성수족발", area: "圣水洞", cat: "韩餐主食", short: "圣水猪蹄",
+    img: IMG2("17944950-9afb-42d1-9148-c27095827b88.jpg"),
+    imgs: [
+      IMG2("17944950-9afb-42d1-9148-c27095827b88.jpg"),
+      IMG4("690bd3da-e590-4478-8910-f2fe562338f4.jpg")
+    ],
+    desc: "小韩国民票选首尔猪蹄前三！\n每天都在排队…猪蹄真的吃一次忘不掉\n菜单只有 猪蹄 & 烧酒 & 米饭\n小菜都可以无限续！朝鲜族可说中文\n韩国朋友带路本地人都在吃" },
+  { id: 23, name: "EGO by show room", area: "圣水洞", cat: "购物", short: "吃谷 / 周边",
+    img: IMG2("3c632d5a-bb6b-4cad-8034-672bbdcc1ea3.jpg"),
+    desc: "答应我来圣水洞一定要来这里好吗！\nbut 不可能原价吃谷\n淘到了几哥喜欢的款式特别可爱～" },
+  { id: 24, name: "보승회관", area: "弘大", cat: "韩餐主食", short: "脊骨汤饭 / 米肠汤饭",
+    img: IMG2("57b01326-b435-4462-9b57-78fd2e03b937.jpg"),
+    desc: "弘大 24 小时营业的百年汤饭\n韩国人很多！连锁新村 / 明洞都有\n招牌脊骨汤饭 & 米肠汤饭 人均 1w 韩币\n适合 1-2 人食，很解酒！" },
+  { id: 25, name: "eert", area: "北村", cat: "咖啡甜品", short: "草莓盒子 / 韩屋大炕",
+    img: IMG2("6c9d7c36-bb30-474b-b77c-f0ff6230f652.jpg"),
+    desc: "毕岔附近的老网红店，是韩式大炕\n草莓盒子 1w8 韩币\n盒子只是形式 味道就是普通" },
+  { id: 26, name: "校村炸鸡", area: "多分店", cat: "炸鸡", short: "蜂蜜炸鸡腿",
+    img: IMG2("8c2d6d68-96df-4e03-b0ec-789e71c9bd7b.jpg"),
+    desc: "蜂蜜炸鸡腿真的很绝！谁懂啊…\n特别酥脆且不油腻\n小韩的炸鸡真的建议\"申遗\"" },
+  { id: 27, name: "hey+hey", area: "圣水洞", cat: "购物", short: "杂货 / 玩偶 / 扭蛋",
+    img: IMG2("9bcc87af-1dcd-4a5f-bd33-c734d5329a85.jpg"),
+    desc: "很多可爱的盘子玩偶贴纸扭蛋\n反正就是一个很大的杂货铺\n蛮好逛的东西很多～" },
+  { id: 28, name: "cafe poje", area: "北村", cat: "咖啡甜品", short: "小熊面包 / 丑橘汁",
+    img: IMG2("9ecc0358-9322-4a3b-828f-5dda002c6886.jpg"),
+    desc: "小熊面包要萌鼠了！\nset 比较划算！丑橘汁好喝！\n拍照特别可爱特别萌口味就还好！" },
+  { id: 29, name: "어묵나라", area: "圣水洞", cat: "韩餐主食", short: "鱼饼 / 辣炒年糕",
+    img: IMG2("a509978f-68cc-436c-88c3-82faabdf7382.jpg"),
+    desc: "圣水地铁站 2 号口，大家的白月光\n都说是小韩最便宜好吃的小吃店～\n络绎不绝的人停下来吃鱼饼！" },
+  { id: 30, name: "perment", area: "圣水洞", cat: "咖啡甜品", short: "无花果奶酪法棍",
+    img: IMG2("b07816c0-7131-4100-8feb-932153a383f0.jpg"),
+    desc: "不吹不黑，圣水洞面包前三…\n随便 citywalk 进去的…韩国人意外的多\n面包多到挑花眼！\n招牌无花果奶酪法棍特别好次！" },
+  { id: 31, name: "ohlollyday", area: "圣水洞", cat: "购物", short: "Happier Mart 文创",
+    img: IMG2("bfb8bcf8-f58e-41c9-a3bc-7fbe344994e1.jpg"),
+    desc: "圣水洞很受欢迎的文创店之一…\n门口就是两排扭蛋\n里面的文创包 + 本子 T 恤都很有个性\n还有很多钥匙挂件" },
+  { id: 32, name: "maman gelato", area: "圣水洞", cat: "咖啡甜品", short: "开心果 gelato",
+    img: IMG2("f0dad2b9-dcaa-4d29-b329-5c4d36663a89.jpg"),
+    desc: "这才是圣水洞最牛逼好吃的 no.1 单品！\n低脂开心果 gelato 8k 韩币 口味好吃！\n中日韩很多人都在排队\n给我乱七八糟一大坨！不会齁！" },
+
+  // ===== 位置待确认 (招牌信息不足) =====
+  { id: 33, name: "韩贞仙 한정선", area: "位置待确认", cat: "咖啡甜品", short: "大福果子 / 伴手礼",
+    img: IMG2("71d6eee9-9098-4083-9925-9e521519cb30.jpg"),
+    desc: "⚠️ 位置待确认\n特别是韩国人排队的大福果子\n口味特别多，均 4k 韩币左右\n可以当伴手礼蛮漂亮嘟" },
+  { id: 34, name: "하이칼국수", area: "位置待确认", cat: "韩餐主食", short: "鱼籽鱼白刀削面",
+    img: IMG2("839fc220-756c-4c6a-8747-d8cdc9485a37.jpg"),
+    desc: "⚠️ 位置待确认\n看到蛮多推广的还是进门吃了\n首切面推荐鱼籽鱼白这款！\n饺子平平无奇价格平价！\n还可以免费加饭泡饭吃！" },
+  { id: 35, name: "무모한상점", area: "位置待确认", cat: "购物", short: "无谋商店 / 杂货",
+    img: IMG2("8a96b700-86bc-4c12-855f-27019ae7bd91.jpg"),
+    desc: "⚠️ 位置待确认\n小杂货铺，门面是三角窗\n各种贴纸 / 谷子 / 玩偶毛绒小挂件" }
+];
+
+// 类别配置 (颜色 + 顺序)
+const ICON = (f) => "图片/icons/" + f;
+const categories = [
+  { name: "韩餐主食", color: "#e74c3c", icon: "🍚", img: ICON("01_korean.png") },
+  { name: "烤肉烧烤", color: "#d35400", icon: "🥩", img: ICON("02_bbq.png") },
+  { name: "炸鸡",     color: "#f39c12", icon: "🍗", img: ICON("03_chicken.png") },
+  { name: "西餐",     color: "#8e44ad", icon: "🍝", img: ICON("04_western.png") },
+  { name: "咖啡甜品", color: "#16a085", icon: "🍰", img: ICON("05_dessert.png") },
+  { name: "饮品",     color: "#3498db", icon: "🥤", img: ICON("06_drink.png") },
+  { name: "购物",     color: "#c0392b", icon: "🛍️", img: ICON("07_shopping.png") },
+  { name: "服饰潮牌", color: "#1abc9c", icon: "👗", img: ICON("08_fashion.png") },
+  { name: "美妆香氛", color: "#e84393", icon: "💄", img: ICON("09_beauty.png") }
+];
+const catColor = Object.fromEntries(categories.map(c => [c.name, c.color]));
+
+// 真实坐标 (WGS84) — 由用户提供，连锁店锚定特定分店
+// 缺失的 (33/34/35) 保持位置待确认
+const coords = {
+  1:  [37.565601, 126.980691],
+  2:  [37.547780, 126.914580],
+  3:  [37.543110, 127.073500],
+  4:  [37.517360, 127.037640],
+  5:  [37.552690, 126.972370],
+  6:  [37.556780, 126.924290],
+  7:  [37.565440, 126.981510],
+  8:  [37.542550, 127.071990],
+  9:  [37.543330, 127.072800],
+  10: [37.518440, 127.017290],
+  11: [37.565390, 126.982030],
+  12: [37.570890, 126.974860],  // BHC 明洞店
+  13: [37.550550, 126.918130],  // Super Coffee 弘大入口店
+  14: [37.566870, 126.984220],  // Milky Shop 明洞店
+  15: [37.543110, 127.073500],
+  16: [37.552690, 126.972370],
+  17: [37.560550, 127.011250],  // Mega 一分店
+  18: [37.560550, 127.011250],  // Compose 一分店
+  19: [37.518960, 127.004470],  // Mom's Touch 一分店
+  20: [37.545530, 127.075810],
+  21: [37.540580, 127.065280],
+  22: [37.545560, 127.075720],
+  23: [37.544620, 127.067490],
+  24: [37.550550, 126.918130],
+  25: [37.578350, 126.978940],
+  26: [37.570890, 126.974860],  // 校村 明洞店
+  27: [37.543110, 127.073500],
+  28: [37.543010, 127.072250],
+  29: [37.544270, 127.075530],
+  30: [37.578750, 126.979850],
+  31: [37.543110, 127.073500],
+  32: [37.542550, 127.071990],
+  // 33, 34, 35 坐标未知
+
+  // ===== 购物 (圣水洞) S1-S10 → id 36-45 =====
+  36: [37.54336, 127.05701],  // Stand Oil
+  37: [37.54493, 127.05417],  // Rockfish
+  38: [37.54658, 127.05494],  // Ader Error
+  39: [37.54597, 127.05425],  // Musinsa
+  40: [37.54718, 127.05700],  // Empty
+  41: [37.54552, 127.05592],  // hince
+  42: [37.54457, 127.05396],  // Tamburins
+  43: [37.54414, 127.05361],  // Dior 圣水
+  44: [37.54611, 127.05552]   // Olive Young N圣水
+  // 45 Nagano Pop-up 坐标不确定
+
+  // ===== 第三批 (46-56) =====
+  ,46: null  // piece of luck — 有地址(서울 은평구 역말로9길 39)，坐标待解析
+  ,47: [37.5579, 126.9026]  // Ugly Bakery
+  ,48: [37.5559, 126.9240]  // 弘大一只鸡
+  // 49 Ling Ling 坐标不确定
+  ,50: [37.5725, 126.9845]  // 명랑시대 쌀핫도그 钟路3街店
+  ,51: [37.5577, 126.9016]  // MintChoco World
+  ,52: [37.5559, 126.9240]  // Super Coffee 弘大分店
+  ,53: [37.5570, 126.9244]  // 홍대조폭떡볶이 명물
+  ,54: [37.5476, 126.9044]  // Ramura 合井
+  ,55: [37.5877, 127.0292]  // Anam 安岩
+  ,56: [37.5570, 126.9043]  // Half Bagel
+
+  // ===== 第四批 弘大三丽鸥/轻松熊 8 家 (57-64) =====
+  ,57: [37.552200, 126.923600]  // Subaco3 弘大本店
+  ,58: [37.551286, 126.922028]  // Object 弘大店
+  ,59: [37.554100, 126.922000]  // Doremi Land
+  ,60: [37.557545, 126.922753]  // AK Plaza 弘大 (主)
+  ,61: [37.557545, 126.922813]  // Cinnamoroll Sweet Cafe (AK 2F · 微偏避免重叠)
+  ,62: [37.557545, 126.922873]  // Rilakkuma · Sumikko Plus (AK 3F · 微偏避免重叠)
+  ,63: [37.551900, 126.924000]  // STAIN2O
+  ,64: [37.557600, 126.920400]  // Daol Store 延南店
+};
+
+// ===== 购物点 (圣水洞 10 家) =====
+const IMG3 = (f) => "图片/2/" + f;
+const shopsRaw = [
+  { id: 36, name: "Stand Oil 스탠드오일", area: "圣水洞", cat: "服饰潮牌", short: "小众极简包·DIY刻字",
+    img: IMG3("c845c6d5-60ad-4b3a-8eb6-6fdef42fdaea.jpg"),
+    desc: "小众极简包｜还能DIY刻字\n质感高级不撞款\n📍연무장11길 19  ⏰11:00-20:00" },
+  { id: 37, name: "Rockfish 록피쉬", area: "圣水洞", cat: "服饰潮牌", short: "芭蕾鞋·鞋花DIY",
+    img: IMG3("f0eb19d0-d6cf-4517-9595-8ad6f842ead8.jpg"),
+    desc: "超火芭蕾鞋｜支持鞋花DIY\n软萌少女感炸裂\n📍연무장길 40 (1-3F)  ⏰12:00-20:00" },
+  { id: 38, name: "Ader Error 아더에러", area: "圣水洞", cat: "服饰潮牌", short: "前卫潮牌·权志龙同款",
+    img: IMG3("213ecd70-30ad-4a1b-b4c7-4c15e4eeac28.jpg"),
+    desc: "前卫潮牌代表｜权志龙同款🔥\n需要排队记得早点去！\n📍성수이로 82  ⏰11:00-21:00" },
+  { id: 39, name: "Musinsa 무신사 스토어 성수", area: "圣水洞", cat: "服饰潮牌", short: "潮牌集合商场",
+    img: IMG3("0b52b402-6c0c-4d54-9ab3-36dafe6356ee.jpg"),
+    desc: "潮牌集合商场｜韩团同款一次买齐\n根本出不来！\n📍성수이로 74  ⏰11:00-22:00" },
+  { id: 40, name: "Empty 엠프티", area: "圣水洞", cat: "服饰潮牌", short: "4 层买手店·小众设计师",
+    img: IMG3("425f2a2b-b986-4d73-9485-f508b00a503e.jpg"),
+    desc: "4 层楼买手店｜小众设计师品牌集中营\n超能逛！\n📍성수이로 97 (1-4F)  ⏰11:00-20:00" },
+  { id: 41, name: "hince 힌스 (快闪)", area: "圣水洞", cat: "美妆香氛", short: "唇颊膏·氛围感拿捏",
+    img: IMG3("8b6b57bb-4b76-4470-80d3-bc70bd6cf2a7.jpg"),
+    desc: "hince 快闪店\n唇颊膏太好看了！质感氛围感直接拿捏\n📍연무장길 48-1  ⏰11:00-21:00" },
+  { id: 42, name: "Tamburins 탬버린즈", area: "圣水洞", cat: "美妆香氛", short: "Jennie 同款香氛·打卡墙",
+    img: IMG3("d6942718-5ed7-43c8-a1e4-ba0c350f393b.jpg"),
+    desc: "Jennie 同款香氛店\n超大打卡墙必拍📸\n📍연무장5길 8  ⏰11:00-21:00" },
+  { id: 43, name: "Dior 디올 성수", area: "圣水洞", cat: "美妆香氛", short: "圣水地标级建筑",
+    img: IMG3("331755a7-456e-4026-92c3-4d921b07b548.jpg"),
+    desc: "Dior 圣水店\n圣水地标级建筑｜晚上灯光绝美\n打卡出片\n📍연무장5길 7  ⏰11:00-20:00" },
+  { id: 44, name: "Olive Young N 성수", area: "圣水洞", cat: "美妆香氛", short: "4 层巨型美妆店",
+    img: IMG3("730414de-f702-4159-96b9-7d091fcca663.jpg"),
+    desc: "Olive Young N 圣水\n四层巨型美妆店｜新品爆款都能找到\n超适合扫货～\n📍연무장7길 13  ⏰10:00-22:00" },
+  { id: 45, name: "Nagano 나가노 (자조곰)", area: "位置待确认", cat: "购物", short: "自嘲熊店·有 chiikawa",
+    img: IMG3("d8511c09-3392-4f43-a81b-94e1206031ed.jpg"),
+    desc: "⚠️ 快闪店性质，具体地址待确认\n自嘲熊店~有 chiikawa\n(小红书号: beibei92589)" }
+];
+restaurantsRaw.push(...shopsRaw);
+
+// ===== 第三批新增 (小红书号: 380606095) =====
+const extraRaw = [
+  { id: 46, name: "piece of luck 카페 피오엘", area: "位置待确认", cat: "咖啡甜品", short: "四叶草主题·水果三明治",
+    img: IMG4("09ae51f2-a1fc-48a1-8346-7951e5c9446b.jpg"),
+    desc: "四叶草主题元素的小店\n三明治选橙子和猕猴桃的，口感比想象中好吃\n还有四叶草咖啡\n菜单: Toffee Nut Cream Latte / Kiwi Ade + Hibiscus Tea\nFruit Sando / Yuja Mint Ade ~\n\n📍 서울특별시 은평구 역말로9길 39\n(延新川站 4 号口附近 · 坐标待解析)" },
+
+  { id: 47, name: "Ugly Bakery 어글리베이커리", area: "弘大", cat: "咖啡甜品", short: "猛犸包·黄芝士",
+    img: IMG4("25d25e4e-baa9-485e-8bc0-f86ac27f8725.jpg"),
+    desc: "大名鼎鼎的猛犸包我也尝到了！\n点的黄芝士猛犸包 Cheese Mammoth\n份量真的很扎实，黄奶酪口感真的很绝\n很适合两个人 share\nOpen 12:00 / @uglybakery" },
+
+  { id: 48, name: "弘大一只鸡 홍익닭한마리", area: "弘大", cat: "韩餐主食", short: "一只鸡·清淡鲜美",
+    img: IMG4("4aa41371-0a03-458c-9a5a-05efa7ea1b15.jpg"),
+    desc: "套餐里包含一只鸡 / 面条 / 配菜\n两个人吃够够的\n鸡肉和鸡汤都很清淡 但是很鲜!!!\n2人份 29000₩ / 3人份 39000₩ / 4人份 49000₩\n半只追加 12000₩ · 24000₩/只" },
+
+  { id: 49, name: "Ling Ling 링링", area: "位置待确认", cat: "咖啡甜品", short: "y2k 咖啡·气泡饮品+蛋糕",
+    img: IMG4("5b460af3-116a-4130-a3b1-193aed2a3fcf.jpg"),
+    desc: "颜值超高的 y2k 咖啡\n每样都好好吃 蛋糕口感不会很甜\n饮品里各种可爱的果冻，两杯都是气泡\n推荐: Ling Ling / Black Rasberry / Icy Choco / Cream Soda\n店内 Hello Kitty 摆件超多" },
+
+  { id: 50, name: "명랑시대 쌀핫도그 (钟路3街)", area: "钟路", cat: "炸鸡", short: "米热狗·5种口味套盒",
+    img: IMG4("89adc483-c1ea-4cdc-b290-a2639f8982d4.jpg"),
+    desc: "盒装真的很划算，一个 set 可以吃到 5 种口味\n芝士浓郁，还能拉丝，太喜欢了\n经典款 3,200~3,700₩\n通モッツァ / 의성마늘 系列推荐\nset 16,900₩ 起" },
+
+  { id: 51, name: "MintChoco World 민트초코월드", area: "弘大", cat: "咖啡甜品", short: "薄荷巧克力主题·超出片",
+    img: IMG4("8e6b3e1a-aaad-4219-a786-781b740092ad.jpg"),
+    desc: "薄荷巧克力主题甜品店\n喜欢薄荷巧克力的一定不能错过\n马芬 / 华夫 / 闪电泡芙 / Mint Mojito Coffee / MintChoco Tiramisu\nMintchoco eclair 6,500₩\n薄巧甜品真的超级出片" },
+
+  { id: 52, name: "Super Coffee / Super Fruit", area: "弘大", cat: "饮品", short: "弘大爆款·真草莓牛奶",
+    img: IMG4("abdfacf5-9326-43a6-8ad8-169a398e0dda.jpg"),
+    desc: "弘大超火的草莓牛奶 생딸기우유\n瓶子里真的有超级多的真草莓!\n酸甜度刚刚好的那种!!\n倒出来喝了很多后，也都还有超多果肉!!\n而且是真真切切每一口都能喝到草莓肉的!!\n一瓶下肚很有饱腹感 hhh" },
+
+  { id: 53, name: "명물 (홍대조폭떡볶이)", area: "弘大", cat: "韩餐主食", short: "弘大网红炒年糕·EXO 推荐",
+    img: IMG4("b9e4992e-4810-497e-97f5-2b4eb94e9971.jpg"),
+    desc: "来弘大一定要吃的炒年糕\n感谢 EXO！！EXO 推荐的店真的没有踩雷好好吃啊\n炒年糕 + 血肠 + 炸物 套餐 14,000₩ 左右\n弘大直营 2 号店 · 1 人用回转席\n홍대조폭떡볶이 ~ 명물 (弘大名物)" },
+
+  { id: 54, name: "Ramura 라무라", area: "弘大", cat: "韩餐主食", short: "YG 隔壁拉面·local",
+    img: IMG4("d8832e6c-e20f-453c-a395-266e713542a9.jpg"),
+    desc: "YG 隔壁的拉面店 (Fusion Noodle Shop)\n都是本地人吃的，挺 local\n推荐红汤和酱油浓汤\n红汤口感浓郁，酱油浓汤也很不错\n大块烤鸡腿肉 + 溏心蛋 + 拉面" },
+
+  { id: 55, name: "Anam 안암", area: "安岩洞", cat: "韩餐主食", short: "米其林平价·猪肉汤饭",
+    img: IMG4("da03a444-8225-47bd-98d9-a8835a8238f2.jpg"),
+    desc: "📍 안암\n整体口味很清淡\n饭点需要排队，座位比较少\n首尔平价米其林 (Michelin 2024/2025)\n猪肉汤饭汤底很鲜\n个人更喜欢副菜淋柠檬汁的猪肉肉沙拉真的清爽" },
+
+  { id: 56, name: "Half Bagel 하프베이글", area: "弘大", cat: "咖啡甜品", short: "水果贝果·超大果肉",
+    img: IMG4("f21e3aba-3205-49b2-bdfc-fa1e9102069d.jpg"),
+    desc: "水果贝果店，内馅水果真的超大块啊\n料很足颜值也很高，出乎意外的好吃\n经典款: 草莓巧克力 / 蓝莓 / Brownie 草莓 / 抹茶柚子\n6,300~7,800₩\n店面绿色门头 HALF BAGEL" }
+];
+restaurantsRaw.push(...extraRaw);
+
+// ===== 第四批 弘大三丽鸥/轻松熊 8 家 (小红书: 哇R) =====
+const extra2Raw = [
+  { id: 57, name: "Subaco3 스바코3", area: "弘大", cat: "购物", short: "🔥 复古三丽鸥小店·限定款",
+    img: IMG5("dbc322bc-b8ae-4bcc-9f9b-1b44f8d79ec4.jpg"),
+    desc: "超萌的复古小店，里面有很多限定款三丽鸥\n首尔一共有三家分店，最推荐的之一❗\n楼下入口 Tom's Noodles · 上楼即店\n🧭 Naver Map 搜索 \"Subaco\"" },
+
+  { id: 58, name: "Object 오브젝트", area: "弘大", cat: "购物", short: "4 层文创·韩系精品",
+    img: IMG5("06f0cf63-e342-4c94-b997-7dc4d6f21b7a.jpg"),
+    desc: "四层的文创店，很多韩系精品\n蜡烛 / 戒指墙 / 饰品 / 印章 / 贴纸\n本馆建筑外墙有大幅手绘海报\n🧭 Naver Map 搜索 \"Object\"" },
+
+  { id: 59, name: "Doremi Land 도레미랜드", area: "弘大", cat: "购物", short: "2 楼小店·超多三丽鸥",
+    img: IMG5("b3d21994-daf1-4bbd-80dd-68fe169c0783.jpg"),
+    desc: "店在二楼，非常小，但是超多三丽鸥\nToy & Gift Shop · 一楼是 Mammoth Coffee Express\n挂件 / 公仔 / 谷子 一应俱全\n🧭 Naver Map 搜索 \"Doremi Land\"" },
+
+  { id: 60, name: "AK Plaza 弘大 AK&", area: "弘大", cat: "购物", short: "综合商场·多层精品",
+    img: IMG5("23656af9-002e-42e7-ac15-a8f6328fc7a6.jpg"),
+    desc: "弘大 AK Plaza · 每一层都有很多精品店\n5F / 6F / 7F 集中各种潮玩 / 三丽鸥 / 周边\n地下连接弘大入口站 (2号线)\n含 #61 玉桂狗 Cafe (2F) · #62 轻松熊 Plus (3F)" },
+
+  { id: 61, name: "Cinnamonroll Sweet Cafe 시나모롤 스위트카페", area: "弘大", cat: "购物", short: "玉桂狗主题·AK 2F",
+    img: IMG5("3a9c65fe-7cb1-4d89-95c0-b3461c04ea68.jpg"),
+    desc: "在 AK Plaza 第二层\n超级萌，很多玉桂狗 (Cinnamoroll) 公仔和 Hello Kitty\n也有这个店的限定版\nHappy Birthday 主题装饰墙·拍照打卡满分" },
+
+  { id: 62, name: "Rilakkuma · Sumikkogurashi Plus 리락쿠마·스미코구라시", area: "弘大", cat: "购物", short: "轻松熊+角落生物·AK 3F",
+    img: IMG5("63d366d6-025a-48b9-ad3d-f9921ac97cee.jpg"),
+    desc: "在 AK Plaza 三楼\n全是轻松熊 (Rilakkuma) + 角落生物 (Sumikkogurashi) by San-X\n超级萌，还有专门的拍照区\n限定 Re-Ment 食玩 / 大型公仔合影场景" },
+
+  { id: 63, name: "STAIN2O 스테인투오", area: "弘大", cat: "购物", short: "卡通瓷器·一面墙三丽鸥",
+    img: IMG5("85396d1b-7ba3-43a9-a9e5-b079f2897864.jpg"),
+    desc: "主要是卖瓷器盘子的，超级精致\n也有一面墙的三丽鸥挂件\n熊熊 / 小狗 / 小猫造型陶瓷盘超治愈\n马克杯 / 餐具 / 小碟 / 限定 Hello Kitty" },
+
+  { id: 64, name: "Daol Store Yeonnam Branch 다올스토어 연남점", area: "弘大", cat: "购物", short: "🔥 超大潮玩·攻略最爱",
+    img: IMG5("439c13ba-5b9e-4153-b19a-254e24d6efc6.jpg"),
+    desc: "超大的潮玩店，超多三丽鸥和轻松熊\n目不暇接，攻略主最喜欢的一家\n位于延南洞 (Yeonnam-dong)\nHello Kitty 限定 / 美乐蒂 / 库洛米 / 玉桂狗 / 角落生物 / 龙猫 应有尽有" }
+];
+restaurantsRaw.push(...extra2Raw);
+
+const restaurants = restaurantsRaw.map(r => {
+  const co = coords[r.id];
+  if (co) return { ...r, lat: co[0], lng: co[1] };
+  return { ...r, lat: null, lng: null };
+});
+
+// 同坐标多家店 → 自动散开 ~20m 圆周排列，避免 marker 互相遮挡
+const _dupMap = {};
+restaurants.forEach(r => {
+  if (r.lat == null) return;
+  const k = r.lat.toFixed(5) + ',' + r.lng.toFixed(5);
+  (_dupMap[k] = _dupMap[k] || []).push(r);
+});
+Object.values(_dupMap).forEach(arr => {
+  if (arr.length <= 1) return;
+  const R = 0.00020; // ~22m
+  arr.forEach((r, i) => {
+    const ang = (2 * Math.PI * i) / arr.length;
+    r.lat += R * Math.cos(ang);
+    r.lng += R * Math.sin(ang);
+  });
+});
+
+// 初始化地图
+const map = L.map('map').setView([37.5500, 126.9900], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap',
+  maxZoom: 19
+}).addTo(map);
+
+// 热门景区
+hotspots.forEach(h => {
+  const icon = L.divIcon({
+    className: '',
+    html: `<div class="hot-icon">${h.icon}</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18]
+  });
+  const m = L.marker([h.lat, h.lng], { icon, zIndexOffset: 1000 }).addTo(map);
+  const obj = {
+    id: "hs_" + h.icon,
+    name: "⭐ " + h.name,
+    area: h.name,
+    cat: "热门景区",
+    short: h.short || "热门街区",
+    img: h.img || null,
+    desc: h.desc || "首尔热门街区"
+  };
+  m.on('mouseover', (e) => showTooltip(obj, e.originalEvent.clientX, e.originalEvent.clientY));
+  m.on('mousemove', (e) => showTooltip(obj, e.originalEvent.clientX, e.originalEvent.clientY));
+  m.on('mouseout', hideTooltip);
+  m.on('click', () => openModal(obj));
+});
+
+// 酒店数据 (标记在 modal/tooltip 定义之后添加)
+const hotel = {
+  id: "hotel",
+  name: "Hotel Bliss Myeongdong",
+  area: "明洞",
+  cat: "酒店",
+  short: "我的酒店",
+  lat: 37.5614, lng: 126.9858,
+  img: IMG("hotel.jpg"),
+  desc: "我的住处 🏨\n位于明洞，地理位置便利\n步行可达大部分明洞美食"
+};
+
+// 南山塔 (核心景点)
+const IMG_NS = (f) => "图片/南山塔/" + f;
+const namsan = {
+  id: "namsan",
+  name: "🗼 N Seoul Tower 南山塔",
+  area: "龙山区 · 南山公园路 105",
+  cat: "景点",
+  short: "首尔地标 · 10:00-23:00",
+  lat: 37.551169, lng: 126.988227,
+  img: IMG_NS("370edd42-47b9-41e6-8200-a9e831816ea2.jpg"),
+  imgs: [
+    IMG_NS("370edd42-47b9-41e6-8200-a9e831816ea2.jpg"),
+    IMG_NS("4e1e45ab-952a-4ff0-acff-eb044b42482b.jpg"),
+    IMG_NS("695d07a9-8f1a-4a9e-bf3a-b7600e1e6ea9.jpg"),
+    IMG_NS("d1b2c1f4-6231-44a2-b219-213fed9e7928.jpg"),
+    IMG_NS("d20290bf-cfe2-410f-be11-e383b29e478a.jpg"),
+    IMG_NS("d5d34cee-d462-417d-a78e-4f6ae5ade424.jpg")
+  ],
+  desc:
+    "🇰🇷 首尔南山塔超全攻略\n\n" +
+    "营业时间: 10:00-23:00\n" +
+    "✅ 登山到塔下拍照不需要门票，登塔要买票\n" +
+    "🎫 登塔票: 成人 21000₩ / 儿童老人 16000₩\n" +
+    "⏰ 登塔 10:30-22:30 (平日 22:00 停售)\n" +
+    "🔐 爱情锁 9500₩/把 (现场买或自带，挂 2 楼免费区)\n\n" +
+    "✅ 免费表演\n" +
+    "① 烽火台传统表演: 每日 15:00 南山八角亭\n" +
+    "② 夜间灯光秀: 每晚 19:00-24:00 整点换色\n\n" +
+    "🚌 路线一 (最实惠)\n" +
+    "明洞站 3 号口 → 步行 50m 漫画街 (出片)\n" +
+    "→ 沿马路下坡到巴士站 (约 10min)\n" +
+    "→ 01A/01B 巴士上山 (可用气候卡)\n" +
+    "→ 下车再步行 10min 到塔下\n\n" +
+    "🚠 路线二 (最美风景)\n" +
+    "走漫画街 → 右转看到缆车售票处 → 缆车直达观景台\n" +
+    "🎟 缆车票: 成人单程 12000₩ / 往返 15000₩\n" +
+    "          儿童单程 9000₩ / 往返 11500₩\n\n" +
+    "🛗 不想走漫画街？坐免费电梯 (남산오르미)\n" +
+    "位置: 缆车售票处出来右手边玻璃房子\n" +
+    "明洞新世界直走约 10min；或明洞 4 号口左转直走"
+};
+
+// tooltip 元素
+const tooltip = document.getElementById('tooltip');
+function showTooltip(r, x, y) {
+  const imgHtml = r.img
+    ? `<img src="${r.img}" alt="${r.name}" onerror="this.style.display='none'">`
+    : `<div class="no-img">暂无图片</div>`;
+  tooltip.innerHTML = `
+    ${imgHtml}
+    <div class="tt-body">
+      <div class="tt-title">${r.id}. ${r.name}</div>
+      <div class="tt-area">📍 ${r.area} · ${r.short}</div>
+      <div class="tt-desc">${r.desc}</div>
+    </div>`;
+  tooltip.style.display = 'block';
+  // 位置：靠右靠下，避免超出
+  const pad = 14;
+  const w = 260, h = tooltip.offsetHeight || 280;
+  let nx = x + pad, ny = y + pad;
+  if (nx + w > window.innerWidth - 10) nx = x - w - pad;
+  if (ny + h > window.innerHeight - 10) ny = y - h - pad;
+  tooltip.style.left = nx + 'px';
+  tooltip.style.top = ny + 'px';
+}
+function hideTooltip() { tooltip.style.display = 'none'; }
+
+// modal 控制
+const modalMask = document.getElementById('modal-mask');
+const mImg = document.getElementById('m-img');
+const mImgWrap = mImg.parentElement;
+const mId = document.getElementById('m-id');
+const mTitle = document.getElementById('m-title');
+const mArea = document.getElementById('m-area');
+const mShort = document.getElementById('m-short');
+const mDesc = document.getElementById('m-desc');
+
+// 轮播状态
+let currentImgs = [];
+let currentImgIdx = 0;
+
+function renderModalImg() {
+  if (!currentImgs.length) {
+    mImgWrap.innerHTML = '<div class="no-img-big">暂无图片</div>';
+    return;
+  }
+  const src = currentImgs[currentImgIdx];
+  let html = `<img id="m-img" src="${src}" alt="">`;
+  if (currentImgs.length > 1) {
+    html += `<button class="m-nav-btn m-nav-prev" id="m-prev" aria-label="上一张">‹</button>`;
+    html += `<button class="m-nav-btn m-nav-next" id="m-next" aria-label="下一张">›</button>`;
+    html += `<div class="m-counter">${currentImgIdx + 1} / ${currentImgs.length}</div>`;
+  }
+  mImgWrap.innerHTML = html;
+  const imgEl = document.getElementById('m-img');
+  if (imgEl) {
+    imgEl.onerror = () => {
+      mImgWrap.innerHTML = '<div class="no-img-big">图片加载失败</div>';
+    };
+  }
+  if (currentImgs.length > 1) {
+    document.getElementById('m-prev').onclick = (e) => {
+      e.stopPropagation();
+      currentImgIdx = (currentImgIdx - 1 + currentImgs.length) % currentImgs.length;
+      renderModalImg();
+    };
+    document.getElementById('m-next').onclick = (e) => {
+      e.stopPropagation();
+      currentImgIdx = (currentImgIdx + 1) % currentImgs.length;
+      renderModalImg();
+    };
+  }
+}
+
+function openModal(r) {
+  hideTooltip();
+  currentModalItem = r;
+  const color = r.cat === "酒店" ? "#4a6fa5" : r.cat === "景点" ? "#e67e22" : r.cat === "热门景区" ? "#ff3b30" : (catColor[r.cat] || areaColor[r.area] || "#555");
+  mId.textContent = typeof r.id === "number" ? ("#" + r.id) : (r.id === "hotel" ? "🏨" : r.id === "namsan" ? "🗼" : r.id && r.id.startsWith("hs_") ? "⭐" : "★");
+  mId.style.background = color;
+  mTitle.textContent = r.name;
+  const mCopy = document.getElementById('m-copy');
+  if (mCopy) mCopy.onclick = () => copyToClipboard(r.name, mCopy);
+  mArea.textContent = "📍 " + r.area;
+  mShort.textContent = r.short;
+  mDesc.textContent = r.desc;
+  currentImgs = r.imgs && r.imgs.length ? r.imgs.slice() : (r.img ? [r.img] : []);
+  currentImgIdx = 0;
+  renderModalImg();
+  renderModalActions();
+  modalMask.classList.add('show');
+}
+function closeModal() {
+  modalMask.classList.remove('show');
+  currentModalItem = null;
+}
+document.getElementById('modal-close').onclick = closeModal;
+modalMask.addEventListener('click', (e) => {
+  if (e.target === modalMask) closeModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (!modalMask.classList.contains('show')) return;
+  if (e.key === 'Escape') closeModal();
+  else if (e.key === 'ArrowLeft' && currentImgs.length > 1) {
+    currentImgIdx = (currentImgIdx - 1 + currentImgs.length) % currentImgs.length;
+    renderModalImg();
+  } else if (e.key === 'ArrowRight' && currentImgs.length > 1) {
+    currentImgIdx = (currentImgIdx + 1) % currentImgs.length;
+    renderModalImg();
+  }
+});
+
+// 餐厅标记 (颜色按类别)
+const markers = {};
+restaurants.forEach(r => {
+  if (r.lat == null || r.lng == null) return; // 位置待确认跳过地图标记
+  const color = catColor[r.cat] || "#555";
+  const icon = L.divIcon({
+    className: '',
+    html: `<div class="rest-icon" data-id="${r.id}" style="background:${color}">${r.id}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14]
+  });
+  const m = L.marker([r.lat, r.lng], { icon }).addTo(map);
+
+  m.on('mouseover', (e) => { showTooltip(r, e.originalEvent.clientX, e.originalEvent.clientY); });
+  m.on('mousemove', (e) => { showTooltip(r, e.originalEvent.clientX, e.originalEvent.clientY); });
+  m.on('mouseout', hideTooltip);
+  m.on('click', () => openModal(r));
+
+  markers[r.id] = m;
+});
+
+// 酒店标记 (常驻显示，不受筛选影响)
+const hotelIcon = L.divIcon({
+  className: '',
+  html: `<div class="hotel-icon">🏨</div>`,
+  iconSize: [40, 40],
+  iconAnchor: [20, 20]
+});
+const hotelMarker = L.marker([hotel.lat, hotel.lng], { icon: hotelIcon, zIndexOffset: 2000 }).addTo(map);
+hotelMarker.on('mouseover', (e) => showTooltip(hotel, e.originalEvent.clientX, e.originalEvent.clientY));
+hotelMarker.on('mousemove', (e) => showTooltip(hotel, e.originalEvent.clientX, e.originalEvent.clientY));
+hotelMarker.on('mouseout', hideTooltip);
+hotelMarker.on('click', () => openModal(hotel));
+
+// 南山塔标记 (核心景点，常驻显示)
+const towerIcon = L.divIcon({
+  className: '',
+  html: `<div class="tower-icon">🗼</div>`,
+  iconSize: [44, 44],
+  iconAnchor: [22, 22]
+});
+const namsanMarker = L.marker([namsan.lat, namsan.lng], { icon: towerIcon, zIndexOffset: 2000 }).addTo(map);
+namsanMarker.on('mouseover', (e) => showTooltip(namsan, e.originalEvent.clientX, e.originalEvent.clientY));
+namsanMarker.on('mousemove', (e) => showTooltip(namsan, e.originalEvent.clientX, e.originalEvent.clientY));
+namsanMarker.on('mouseout', hideTooltip);
+namsanMarker.on('click', () => openModal(namsan));
+
+// 侧栏酒店快捷链接
+const hotelLink = document.getElementById('hotel-link');
+if (hotelLink) {
+  hotelLink.addEventListener('mouseenter', (e) => {
+    hotelLink.style.background = '#eef5ff';
+    const rect = hotelLink.getBoundingClientRect();
+    showTooltip(hotel, rect.left - 270, rect.top);
+  });
+  hotelLink.addEventListener('mouseleave', () => {
+    hotelLink.style.background = '';
+    hideTooltip();
+  });
+  hotelLink.addEventListener('click', () => {
+    map.setView([hotel.lat, hotel.lng], 16, { animate: true });
+    openModal(hotel);
+  });
+}
+
+// 侧栏南山塔快捷链接
+const namsanLink = document.getElementById('namsan-link');
+if (namsanLink) {
+  namsanLink.addEventListener('mouseenter', (e) => {
+    namsanLink.style.background = '#fff4e6';
+    const rect = namsanLink.getBoundingClientRect();
+    showTooltip(namsan, rect.left - 270, rect.top);
+  });
+  namsanLink.addEventListener('mouseleave', () => {
+    namsanLink.style.background = '';
+    hideTooltip();
+  });
+  namsanLink.addEventListener('click', () => {
+    map.setView([namsan.lat, namsan.lng], 15, { animate: true });
+    openModal(namsan);
+  });
+}
+
+// 侧栏 (按区域分组 · 支持折叠)
+const listEl = document.getElementById('list');
+const sideItems = {}; // id -> dom element
+const groups = {};
+restaurants.forEach(r => { (groups[r.area] = groups[r.area] || []).push(r); });
+const areaOrder = ["明洞","圣水洞","弘大","梨泰院","新沙洞","北村","钟路","安岩洞","多分店","位置待确认"];
+const groupEls = {};
+const collapsedGroups = new Set(JSON.parse(localStorage.getItem('sr_collapsed') || '[]'));
+function saveCollapsed() {
+  localStorage.setItem('sr_collapsed', JSON.stringify([...collapsedGroups]));
+}
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function copyToClipboard(text, btn) {
+  const done = () => {
+    if (!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = '✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1200);
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done).catch(() => fallback());
+  } else fallback();
+  function fallback() {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch(e) {}
+    document.body.removeChild(ta);
+  }
+}
+areaOrder.forEach(area => {
+  if (!groups[area]) return;
+  const g = document.createElement('div');
+  g.className = 'group';
+  if (collapsedGroups.has(area)) g.classList.add('collapsed');
+  const label = area === "位置待确认" ? "❓ " + area : ("● " + area);
+  const h3 = document.createElement('h3');
+  h3.style.color = areaColor[area];
+  h3.innerHTML = `<span>${label}</span><span class="gcount">${groups[area].length}</span>`;
+  h3.addEventListener('click', () => {
+    g.classList.toggle('collapsed');
+    if (g.classList.contains('collapsed')) collapsedGroups.add(area);
+    else collapsedGroups.delete(area);
+    saveCollapsed();
+  });
+  g.appendChild(h3);
+  groups[area].forEach(r => {
+    const it = document.createElement('div');
+    it.className = 'item';
+    it.dataset.id = r.id;
+    const dotColor = catColor[r.cat] || "#555";
+    const noLoc = r.lat == null;
+    it.innerHTML = `
+      ${r.img ? `<img class="item-thumb" src="${r.img}" onerror="this.style.visibility='hidden'">` : '<div class="item-thumb"></div>'}
+      <div class="item-text">
+        <div class="name"><span class="cat-dot" style="background:${dotColor}"></span>${r.id}. ${escapeHTML(r.name)}<button class="copy-btn" title="复制店名" data-copy="${escapeHTML(r.name)}">📋</button>${noLoc ? ' <span style="color:#999;font-size:10px;">[无坐标]</span>' : ''}</div>
+        <div class="desc">${r.cat} · ${r.short}</div>
+      </div>
+      <span class="item-flag"></span>`;
+    it.onclick = (e) => {
+      if (e.target.closest('.copy-btn')) return;
+      if (!noLoc) map.setView([r.lat, r.lng], 15, { animate: true });
+      openModal(r);
+    };
+    it.addEventListener('mouseenter', () => {
+      const rect = it.getBoundingClientRect();
+      showTooltip(r, rect.left - 270, rect.top);
+    });
+    it.addEventListener('mouseleave', hideTooltip);
+    g.appendChild(it);
+    sideItems[r.id] = it;
+  });
+  listEl.appendChild(g);
+  groupEls[area] = g;
+});
+
+// 侧栏复制按钮事件委托
+listEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('.copy-btn');
+  if (!btn) return;
+  e.stopPropagation();
+  const txt = btn.getAttribute('data-copy');
+  if (txt) copyToClipboard(txt, btn);
+});
+
+// ===== 用户状态: 喜欢 / 隐藏 (localStorage 持久化) =====
+const userState = {
+  liked: new Set(JSON.parse(localStorage.getItem('sr_liked') || '[]')),
+  hidden: new Set(JSON.parse(localStorage.getItem('sr_hidden') || '[]'))
+};
+function saveUserState() {
+  localStorage.setItem('sr_liked', JSON.stringify([...userState.liked]));
+  localStorage.setItem('sr_hidden', JSON.stringify([...userState.hidden]));
+}
+function toggleLike(id) {
+  if (userState.liked.has(id)) userState.liked.delete(id);
+  else { userState.liked.add(id); userState.hidden.delete(id); }
+  saveUserState();
+  applyFilter();
+  if (currentModalItem && currentModalItem.id === id) renderModalActions();
+}
+function toggleHide(id) {
+  if (userState.hidden.has(id)) userState.hidden.delete(id);
+  else { userState.hidden.add(id); userState.liked.delete(id); }
+  saveUserState();
+  applyFilter();
+  if (currentModalItem && currentModalItem.id === id) renderModalActions();
+}
+
+// ===== modal 操作按钮 =====
+let currentModalItem = null;
+const mActions = document.getElementById('m-actions');
+function renderModalActions() {
+  if (!currentModalItem) { mActions.innerHTML = ''; return; }
+  const id = currentModalItem.id;
+  // 仅普通店 (数字 id) 可标记喜欢/隐藏；酒店、南山塔、热门景区不参与
+  if (typeof id !== 'number') { mActions.innerHTML = ''; return; }
+  const isLiked = userState.liked.has(id);
+  const isHidden = userState.hidden.has(id);
+  mActions.innerHTML = `
+    <button class="m-act-btn ${isLiked ? 'on-like' : ''}" id="act-like">
+      ${isLiked ? '💔 取消喜欢' : '❤️ 喜欢'}
+    </button>
+    <button class="m-act-btn ${isHidden ? 'on-hide' : ''}" id="act-hide">
+      ${isHidden ? '👁 取消隐藏' : '🙈 隐藏'}
+    </button>`;
+  document.getElementById('act-like').onclick = () => toggleLike(id);
+  document.getElementById('act-hide').onclick = () => toggleHide(id);
+}
+
+// ===== 类别筛选 =====
+const SP_LIKED = '__liked__';
+const SP_HIDDEN = '__hidden__';
+const activeCats = new Set(categories.map(c => c.name)); // 默认全选 (不含特殊)
+const topbar = document.getElementById('topbar');
+
+function isVisible(r) {
+  const hd = userState.hidden.has(r.id);
+  if (activeCats.has(SP_HIDDEN)) return hd;      // 隐藏管理模式: 仅显示隐藏
+  if (hd) return false;
+  if (activeCats.has(r.cat)) return true;
+  if (activeCats.has(SP_LIKED) && userState.liked.has(r.id)) return true;
+  return false;
+}
+
+function renderChips() {
+  topbar.querySelectorAll('.cat-chip').forEach(n => n.remove());
+
+  // 全部
+  const allOn = activeCats.size === categories.length && !activeCats.has(SP_HIDDEN) && !activeCats.has(SP_LIKED);
+  const allChip = document.createElement('div');
+  allChip.className = 'cat-chip all' + (allOn ? '' : ' inactive');
+  const visibleCount = restaurants.filter(r => !userState.hidden.has(r.id)).length;
+  allChip.innerHTML = `全部 <span class="cnt">${visibleCount}</span>`;
+  allChip.onclick = () => {
+    activeCats.delete(SP_HIDDEN);
+    activeCats.delete(SP_LIKED);
+    if (allOn) activeCats.clear();
+    else categories.forEach(c => activeCats.add(c.name));
+    applyFilter();
+  };
+  topbar.appendChild(allChip);
+
+  // 各类别
+  categories.forEach(c => {
+    const count = restaurants.filter(r => r.cat === c.name && !userState.hidden.has(r.id)).length;
+    const on = activeCats.has(c.name) && !activeCats.has(SP_HIDDEN);
+    const chip = document.createElement('div');
+    chip.className = 'cat-chip' + (on ? ' active' : '');
+    chip.style.background = on ? c.color : '#fff';
+    chip.style.color = on ? '#fff' : '#333';
+    chip.innerHTML = `<img class="cat-img" src="${c.img}" alt="${c.name}"> ${c.name} <span class="cnt">${count}</span>`;
+    chip.onclick = () => {
+      activeCats.delete(SP_HIDDEN);
+      if (activeCats.has(c.name)) activeCats.delete(c.name);
+      else activeCats.add(c.name);
+      applyFilter();
+    };
+    topbar.appendChild(chip);
+  });
+
+  // ❤️ 喜欢
+  const likedCount = userState.liked.size;
+  const likedOn = activeCats.has(SP_LIKED) && !activeCats.has(SP_HIDDEN);
+  const likedChip = document.createElement('div');
+  likedChip.className = 'cat-chip special special-liked' + (likedOn ? ' active' : '');
+  if (!likedOn) { likedChip.style.background = '#fff'; likedChip.style.color = '#d63060'; }
+  likedChip.innerHTML = `❤️ 喜欢 <span class="cnt">${likedCount}</span>`;
+  likedChip.onclick = () => {
+    activeCats.delete(SP_HIDDEN);
+    if (activeCats.has(SP_LIKED)) activeCats.delete(SP_LIKED);
+    else activeCats.add(SP_LIKED);
+    applyFilter();
+  };
+  topbar.appendChild(likedChip);
+
+  // 🙈 隐藏
+  const hiddenCount = userState.hidden.size;
+  const hiddenOn = activeCats.has(SP_HIDDEN);
+  const hiddenChip = document.createElement('div');
+  hiddenChip.className = 'cat-chip special special-hidden' + (hiddenOn ? ' active' : '');
+  if (!hiddenOn) { hiddenChip.style.background = '#fff'; hiddenChip.style.color = '#555'; }
+  hiddenChip.innerHTML = `🙈 隐藏 <span class="cnt">${hiddenCount}</span>`;
+  hiddenChip.onclick = () => {
+    if (activeCats.has(SP_HIDDEN)) activeCats.delete(SP_HIDDEN);
+    else activeCats.add(SP_HIDDEN);
+    applyFilter();
+  };
+  topbar.appendChild(hiddenChip);
+}
+
+function applyFilter() {
+  // marker
+  restaurants.forEach(r => {
+    const m = markers[r.id];
+    if (!m) return;
+    const vis = isVisible(r);
+    if (vis) { if (!map.hasLayer(m)) m.addTo(map); }
+    else { if (map.hasLayer(m)) map.removeLayer(m); }
+  });
+  // 侧栏
+  Object.keys(groupEls).forEach(area => {
+    let anyVisible = false;
+    groups[area].forEach(r => {
+      const it = sideItems[r.id];
+      const vis = isVisible(r);
+      it.style.display = vis ? '' : 'none';
+      const flagEl = it.querySelector('.item-flag');
+      if (flagEl) {
+        const lk = userState.liked.has(r.id);
+        const hd = userState.hidden.has(r.id);
+        flagEl.textContent = hd ? '🙈' : (lk ? '❤️' : '');
+      }
+      it.classList.toggle('is-hidden', userState.hidden.has(r.id));
+      if (vis) anyVisible = true;
+    });
+    groupEls[area].style.display = anyVisible ? '' : 'none';
+  });
+  renderChips();
+}
+
+renderChips();
+applyFilter();
+
+// 自适应
+const allLatLng = [...hotspots, ...restaurants.filter(r => r.lat != null), hotel, namsan].map(p => [p.lat, p.lng]);
+map.fitBounds(allLatLng, { padding: [40, 40] });
+</script>
+</body>
+</html>
