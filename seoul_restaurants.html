@@ -348,6 +348,125 @@
     .m-actions .m-action-btn, #modal .m-actions button { min-height: 44px; padding: 10px 14px; font-size: 14px; }
   }
   @keyframes slideup { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+  /* ===== 详情页 (全屏 list ↔ swipe overlay) ===== */
+  #details-toggle {
+    position: absolute; top: 68px; right: 352px; z-index: 1100;
+    height: 36px; padding: 0 14px;
+    background: #fff; color: #333; border: 1px solid #ddd;
+    border-radius: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    cursor: pointer; font-size: 13px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: right .25s ease, background .15s, color .15s;
+    user-select: none;
+  }
+  #details-toggle:hover { background: #f0f7ff; color: #0066cc; }
+  #details-toggle.active { background: #0066cc; color: #fff; border-color: #0066cc; }
+  body.sidebar-hidden #details-toggle { right: 12px; }
+  @media (max-width: 768px), (pointer: coarse) and (max-width: 900px) {
+    #details-toggle {
+      right: 12px;
+      top: calc(env(safe-area-inset-top) + 60px);
+      height: 38px; font-size: 14px;
+    }
+  }
+
+  #details-overlay {
+    position: fixed; inset: 0; z-index: 9500;
+    background: #f5f5f7; display: none;
+    flex-direction: column;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  #details-overlay.show { display: flex; animation: slideup .25s ease; }
+  #details-header {
+    flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-bottom: 1px solid #e5e5e7; background: #fff;
+    min-height: 52px;
+  }
+  #details-header .dh-title { font-size: 16px; font-weight: 700; color: #222; }
+  #details-header .dh-sub { font-size: 11px; color: #888; margin-left: 8px; }
+  #details-close {
+    width: 40px; height: 40px; border: none; background: rgba(0,0,0,.06);
+    border-radius: 50%; cursor: pointer; font-size: 18px; color: #333;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #details-close:hover { background: rgba(0,0,0,.12); }
+
+  #details-list {
+    flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 12px 12px 60px; display: none;
+    overscroll-behavior: contain;
+  }
+  #details-overlay.view-list #details-list { display: block; }
+  .dl-card {
+    background: #fff; border-radius: 12px; margin: 0 0 12px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.06);
+    overflow: hidden; cursor: pointer;
+    transition: transform .12s ease, box-shadow .15s;
+    display: flex; min-height: 96px;
+  }
+  .dl-card:active { transform: scale(0.985); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .dl-card .dl-thumb {
+    width: 96px; flex: 0 0 96px; height: 96px;
+    background: #ececec center/cover no-repeat;
+  }
+  .dl-card .dl-body { padding: 10px 12px; flex: 1 1 auto; min-width: 0; }
+  .dl-card .dl-name {
+    font-size: 14px; font-weight: 700; color: #222;
+    display: flex; align-items: center; gap: 6px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .dl-card .dl-name .dl-id {
+    flex: 0 0 auto; display: inline-block; padding: 1px 7px; border-radius: 10px;
+    background: #f0f0f0; color: #666; font-size: 11px; font-weight: 600;
+  }
+  .dl-card .dl-meta { font-size: 12px; color: #888; margin-top: 4px; }
+  .dl-card .dl-short { font-size: 12px; color: #555; margin-top: 4px; line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .dl-card.no-loc { opacity: 0.85; }
+  .dl-card.no-loc .dl-name::after { content: "[无坐标]"; font-size: 10px; color: #999; font-weight: normal; margin-left: 4px; }
+
+  /* swipe view: scroll-snap 上下分页 */
+  #details-swipe {
+    flex: 1 1 auto; overflow-y: scroll; -webkit-overflow-scrolling: touch;
+    scroll-snap-type: y mandatory; scroll-behavior: smooth;
+    display: none; overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+  #details-swipe::-webkit-scrollbar { display: none; }
+  #details-overlay.view-swipe #details-swipe { display: block; }
+  .ds-page {
+    height: 100%; min-height: 100%;
+    scroll-snap-align: start; scroll-snap-stop: always;
+    background: #fff; display: flex; flex-direction: column;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.03);
+  }
+  .ds-page .ds-img {
+    flex: 0 0 auto; height: 48%; background: #000 center/contain no-repeat;
+    position: relative;
+  }
+  .ds-page .ds-img-nav {
+    position: absolute; bottom: 8px; right: 12px;
+    background: rgba(0,0,0,0.5); color: #fff; font-size: 11px;
+    padding: 3px 8px; border-radius: 10px; pointer-events: none;
+  }
+  .ds-page .ds-body { flex: 1 1 auto; padding: 16px 18px; overflow-y: auto; }
+  .ds-page .ds-id {
+    display: inline-block; padding: 2px 10px; border-radius: 10px;
+    background: #333; color: #fff; font-size: 11px; font-weight: 700;
+  }
+  .ds-page .ds-title {
+    font-size: 19px; font-weight: 700; margin: 8px 0 4px;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .ds-page .ds-area { color: #2a73d9; font-size: 13px; }
+  .ds-page .ds-short { color: #555; font-size: 13px; margin: 6px 0 12px; }
+  .ds-page .ds-desc { color: #333; font-size: 14px; line-height: 1.6; white-space: pre-line; }
+  .ds-page .ds-hint {
+    text-align: center; color: #aaa; font-size: 11px; padding: 8px 0 12px;
+  }
 </style>
 </head>
 <body>
@@ -357,6 +476,18 @@
 </div>
 
 <div id="map"></div>
+<button id="details-toggle" title="详情页">📋 详情页</button>
+<div id="details-overlay" class="view-list">
+  <div id="details-header">
+    <div>
+      <span class="dh-title" id="details-title">详情列表</span>
+      <span class="dh-sub" id="details-sub"></span>
+    </div>
+    <button id="details-close" aria-label="关闭">✕</button>
+  </div>
+  <div id="details-list"></div>
+  <div id="details-swipe"></div>
+</div>
 <div id="tooltip"></div>
 
 <!-- 大浮窗 -->
@@ -907,6 +1038,132 @@ function maybeCollapseSheet() {
     setSheetExpanded(false);
   }
 }
+
+// ========== 详情页 overlay (list ↔ swipe) ==========
+const detailsToggle = document.getElementById('details-toggle');
+const detailsOverlay = document.getElementById('details-overlay');
+const detailsClose = document.getElementById('details-close');
+const detailsListEl = document.getElementById('details-list');
+const detailsSwipeEl = document.getElementById('details-swipe');
+const detailsTitleEl = document.getElementById('details-title');
+const detailsSubEl = document.getElementById('details-sub');
+let detailsView = 'list'; // 'list' | 'swipe'
+let detailsBuilt = false;
+let swipePages = []; // 与 currentDataset 对应顺序
+
+function getCurrentDataset() {
+  // 复用已有的 isVisible 逻辑 (含 隐藏/喜欢/分类筛选)
+  if (typeof isVisible === 'function') return restaurants.filter(isVisible);
+  return restaurants.slice();
+}
+
+function buildDetailsList() {
+  const data = getCurrentDataset();
+  detailsListEl.innerHTML = '';
+  detailsSubEl.textContent = ' · 共 ' + data.length + ' 家';
+  data.forEach((r, idx) => {
+    const card = document.createElement('div');
+    card.className = 'dl-card' + (r.lat == null ? ' no-loc' : '');
+    const thumbStyle = r.img ? `background-image:url('${r.img.replace(/'/g, "\\'")}')` : '';
+    card.innerHTML = `
+      <div class="dl-thumb" style="${thumbStyle}"></div>
+      <div class="dl-body">
+        <div class="dl-name"><span class="dl-id">#${r.id}</span><span>${escapeHTML(r.name)}</span></div>
+        <div class="dl-meta">${escapeHTML(r.area)} · ${escapeHTML(r.cat)}</div>
+        <div class="dl-short">${escapeHTML(r.short || '')}</div>
+      </div>`;
+    card.addEventListener('click', () => enterSwipeView(idx));
+    detailsListEl.appendChild(card);
+  });
+  buildDetailsSwipe(data);
+}
+
+function buildDetailsSwipe(data) {
+  detailsSwipeEl.innerHTML = '';
+  swipePages = [];
+  data.forEach((r, idx) => {
+    const page = document.createElement('div');
+    page.className = 'ds-page';
+    page.dataset.idx = idx;
+    const imgs = (r.imgs && r.imgs.length) ? r.imgs : (r.img ? [r.img] : []);
+    const first = imgs[0] || '';
+    const imgStyle = first ? `background-image:url('${first.replace(/'/g, "\\'")}')` : '';
+    const navHtml = imgs.length > 1 ? `<div class="ds-img-nav">1 / ${imgs.length}</div>` : '';
+    page.innerHTML = `
+      <div class="ds-img" style="${imgStyle}">${navHtml}</div>
+      <div class="ds-body">
+        <span class="ds-id">#${r.id}</span>
+        <div class="ds-title">
+          <span>${escapeHTML(r.name)}</span>
+          <button class="copy-btn" data-copy="${escapeHTML(r.name)}" title="复制店名">📋 复制</button>
+        </div>
+        <div class="ds-area">📍 ${escapeHTML(r.area)} · ${escapeHTML(r.cat)}${r.lat == null ? ' · [无坐标]' : ''}</div>
+        <div class="ds-short">${escapeHTML(r.short || '')}</div>
+        <div class="ds-desc">${escapeHTML(r.desc || '')}</div>
+        <div class="ds-hint">${idx + 1} / ${data.length} · 上下滑动切换 · ✕ 返回列表</div>
+      </div>`;
+    detailsSwipeEl.appendChild(page);
+    swipePages.push(page);
+  });
+  // 委托复制
+  detailsSwipeEl.addEventListener('click', swipeCopyHandler);
+}
+function swipeCopyHandler(e) {
+  const btn = e.target.closest('.copy-btn');
+  if (!btn) return;
+  e.stopPropagation();
+  copyToClipboard(btn.getAttribute('data-copy'), btn);
+}
+
+function setDetailsView(v) {
+  detailsView = v;
+  detailsOverlay.classList.toggle('view-list', v === 'list');
+  detailsOverlay.classList.toggle('view-swipe', v === 'swipe');
+  if (v === 'list') {
+    detailsTitleEl.textContent = '详情列表';
+  } else {
+    detailsTitleEl.textContent = '店铺详情';
+  }
+}
+
+function enterSwipeView(idx) {
+  setDetailsView('swipe');
+  // 等 display 切换后再 scroll
+  requestAnimationFrame(() => {
+    const page = swipePages[idx];
+    if (page) detailsSwipeEl.scrollTo({ top: page.offsetTop, behavior: 'auto' });
+  });
+}
+
+function openDetails() {
+  if (!detailsBuilt) { buildDetailsList(); detailsBuilt = true; }
+  else { buildDetailsList(); } // 每次重建以反映最新筛选
+  setDetailsView('list');
+  detailsOverlay.classList.add('show');
+  detailsToggle.classList.add('active');
+  detailsToggle.innerHTML = '✕ 关闭';
+}
+function closeDetails() {
+  detailsOverlay.classList.remove('show');
+  detailsToggle.classList.remove('active');
+  detailsToggle.innerHTML = '📋 详情页';
+}
+detailsToggle.addEventListener('click', () => {
+  if (detailsOverlay.classList.contains('show')) closeDetails();
+  else openDetails();
+});
+detailsClose.addEventListener('click', () => {
+  if (detailsView === 'swipe') setDetailsView('list'); // swipe → 回 list
+  else closeDetails(); // list → 关 overlay
+});
+// ESC 同上
+document.addEventListener('keydown', (e) => {
+  if (!detailsOverlay.classList.contains('show')) return;
+  if (e.key === 'Escape') {
+    if (detailsView === 'swipe') setDetailsView('list');
+    else closeDetails();
+  }
+});
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap',
   maxZoom: 19
