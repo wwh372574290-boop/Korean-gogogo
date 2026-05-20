@@ -2,10 +2,21 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#fafafa">
 <title>首尔美食 & 购物地图 - 45 家</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-  html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior: none;
+  }
+  button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
   #topbar {
     position: absolute; top: 0; left: 0; right: 340px; height: 56px;
     background: #fff; border-bottom: 1px solid #ddd; z-index: 500;
@@ -54,10 +65,98 @@
   }
   #sidebar-toggle:hover { background: #f0f7ff; color: #0066cc; }
   body.sidebar-hidden #sidebar-toggle { right: 0; border-radius: 6px 0 0 6px; }
-  @media (max-width: 700px) {
-    #sidebar { width: 86vw; }
-    #map { right: 86vw; }
-    #sidebar-toggle { right: calc(86vw + 8px); }
+
+  /* sheet drag handle (移动端可见, 桌面端隐藏) */
+  #sheet-handle { display: none; }
+
+  /* ===== iPhone / 移动端: 改为底部抽屉 ===== */
+  @media (max-width: 768px), (pointer: coarse) and (max-width: 900px) {
+    /* 顶部筛选条 */
+    #topbar {
+      right: 0;
+      padding-top: env(safe-area-inset-top);
+      height: calc(52px + env(safe-area-inset-top));
+      padding-left: max(12px, env(safe-area-inset-left));
+      padding-right: max(12px, env(safe-area-inset-right));
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    #topbar::-webkit-scrollbar { display: none; }
+    #topbar .tb-label { display: none; }
+    .cat-chip { padding: 8px 14px; font-size: 14px; min-height: 36px; }
+
+    /* 地图占满 */
+    #map {
+      top: calc(52px + env(safe-area-inset-top));
+      right: 0; bottom: 0;
+      transition: none;
+    }
+
+    /* 侧栏 = 底部 sheet, 默认 peek 状态 */
+    #sidebar {
+      top: auto; left: 0; right: 0; width: 100%;
+      bottom: 0;
+      height: 88vh;
+      max-height: 88vh;
+      border-left: none;
+      border-top-left-radius: 18px;
+      border-top-right-radius: 18px;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.18);
+      padding: 0 16px 16px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      transform: translateY(calc(88vh - 110px));
+      transition: transform .3s cubic-bezier(.2,.9,.3,1);
+      overflow: hidden;
+      touch-action: pan-y;
+    }
+    /* 关闭原 transform 的 sidebar-hidden 行为 */
+    body.sidebar-hidden #sidebar {
+      transform: translateY(calc(88vh - 110px)) !important;
+    }
+    body.sidebar-expanded #sidebar { transform: translateY(0); }
+    body.sidebar-expanded #sidebar .sidebar-scroll { overflow-y: auto; }
+
+    /* 内部滚动容器 */
+    #sidebar .sidebar-scroll {
+      max-height: calc(88vh - 56px);
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding-top: 4px;
+    }
+
+    /* drag handle 把手 (移动端可见) */
+    #sheet-handle {
+      display: flex;
+      position: sticky; top: 0;
+      height: 32px; margin: 0 -16px 4px;
+      background: #fafafa;
+      align-items: center; justify-content: center;
+      cursor: grab; user-select: none;
+      z-index: 5;
+      border-top-left-radius: 18px;
+      border-top-right-radius: 18px;
+    }
+    #sheet-handle::before {
+      content: ''; width: 40px; height: 5px;
+      background: #d0d0d0; border-radius: 3px;
+    }
+    body.sidebar-expanded #sheet-handle { cursor: grab; }
+
+    /* 隐藏桌面的折叠按钮, 改用 handle 拖拽 */
+    #sidebar-toggle { display: none; }
+
+    /* 移动端 sheet header 简化 */
+    #sidebar h1 { font-size: 16px; padding-top: 4px; margin: 0 0 2px; }
+    #sidebar .sub { font-size: 11px; margin-bottom: 8px; }
+    #sidebar .legend { padding: 8px; margin-bottom: 10px; }
+
+    /* item 触摸目标加大 */
+    #sidebar .item { padding: 10px 6px; min-height: 56px; }
+    #sidebar .copy-btn { padding: 4px 10px; font-size: 13px; line-height: 18px; min-width: 36px; }
+    #sidebar .group h3 { padding: 8px 0; font-size: 14px; min-height: 32px; }
+
+    /* Leaflet 控件避让顶栏 + safe-area */
+    .leaflet-top.leaflet-left { top: calc(env(safe-area-inset-top) + 8px) !important; }
   }
   h1 { font-size: 18px; margin: 0 0 4px; }
   .sub { color: #888; font-size: 12px; margin-bottom: 12px; }
@@ -235,9 +334,20 @@
   #modal-close:hover { background: rgba(0,0,0,0.85); }
 
   @media (max-width: 640px) {
-    #modal { flex-direction: column; max-width: 95%; }
-    #modal .m-img-wrap { max-height: 40vh; min-height: 200px; }
+    #modal-mask { align-items: flex-end; }
+    #modal {
+      flex-direction: column; max-width: 100%; width: 100%;
+      max-height: 92vh; border-radius: 18px 18px 0 0;
+      animation: slideup 0.28s cubic-bezier(.2,.9,.3,1);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    #modal .m-img-wrap { max-height: 42vh; min-height: 200px; flex: 0 0 auto; }
+    #modal .m-body { padding: 16px 18px; }
+    .m-nav-btn { width: 44px; height: 44px; font-size: 24px; }
+    #modal-close { width: 40px; height: 40px; top: 12px; right: 12px; font-size: 20px; }
+    .m-actions .m-action-btn, #modal .m-actions button { min-height: 44px; padding: 10px 14px; font-size: 14px; }
   }
+  @keyframes slideup { from { transform: translateY(100%); } to { transform: translateY(0); } }
 </style>
 </head>
 <body>
@@ -269,6 +379,8 @@
 <button id="sidebar-toggle" title="折叠/展开侧栏">▶</button>
 
 <div id="sidebar">
+  <div id="sheet-handle" role="button" aria-label="拖拽展开/收起"></div>
+  <div class="sidebar-scroll">
   <h1>首尔美食 & 购物 · 64 家</h1>
   <div class="sub">铲屎老夏 · 推荐 · 鼠标悬停查看详情</div>
 
@@ -288,6 +400,7 @@
   </div>
 
   <div id="list"></div>
+  </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -701,6 +814,99 @@ sidebarToggle.addEventListener('click', () => {
 });
 // 初始化状态
 setSidebarHidden(localStorage.getItem('sr_sidebar_hidden') === '1');
+
+// ========== 移动端 bottom sheet 拖拽 / 点击切换 ==========
+const isTouchDevice = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window;
+const sheetHandle = document.getElementById('sheet-handle');
+const sidebarEl = document.getElementById('sidebar');
+const sidebarScroll = sidebarEl.querySelector('.sidebar-scroll');
+function isMobileLayout() { return window.matchMedia('(max-width: 768px)').matches; }
+function setSheetExpanded(expanded) {
+  document.body.classList.toggle('sidebar-expanded', expanded);
+  localStorage.setItem('sr_sheet_expanded', expanded ? '1' : '0');
+  setTimeout(() => map.invalidateSize(), 320);
+}
+function toggleSheet() { setSheetExpanded(!document.body.classList.contains('sidebar-expanded')); }
+
+// 单击 handle 切换
+sheetHandle.addEventListener('click', (e) => {
+  if (!isMobileLayout()) return;
+  toggleSheet();
+});
+
+// 触摸拖拽
+let dragStartY = 0, dragStartT = 0, dragging = false, dragStartExpanded = false, dragDelta = 0;
+function onTouchStart(e) {
+  if (!isMobileLayout()) return;
+  const t = e.touches[0];
+  dragStartY = t.clientY;
+  dragStartT = Date.now();
+  dragging = true;
+  dragStartExpanded = document.body.classList.contains('sidebar-expanded');
+  dragDelta = 0;
+  sidebarEl.style.transition = 'none';
+}
+function onTouchMove(e) {
+  if (!dragging) return;
+  const t = e.touches[0];
+  dragDelta = t.clientY - dragStartY;
+  const baseY = dragStartExpanded ? 0 : (window.innerHeight * 0.88 - 110);
+  let y = baseY + dragDelta;
+  const maxY = window.innerHeight * 0.88 - 110;
+  if (y < 0) y = y * 0.3; // 拉过头阻尼
+  if (y > maxY) y = maxY + (y - maxY) * 0.3;
+  sidebarEl.style.transform = `translateY(${y}px)`;
+  e.preventDefault();
+}
+function onTouchEnd() {
+  if (!dragging) return;
+  dragging = false;
+  sidebarEl.style.transition = '';
+  sidebarEl.style.transform = '';
+  const dt = Date.now() - dragStartT;
+  const velocity = dragDelta / Math.max(dt, 1); // px/ms
+  // 决策: 速度优先, 距离次之
+  let expand = dragStartExpanded;
+  if (velocity < -0.3) expand = true;      // 快速上滑
+  else if (velocity > 0.3) expand = false; // 快速下滑
+  else if (Math.abs(dragDelta) > 80)        // 慢速但距离够
+    expand = dragDelta < 0;
+  setSheetExpanded(expand);
+}
+sheetHandle.addEventListener('touchstart', onTouchStart, { passive: true });
+sheetHandle.addEventListener('touchmove', onTouchMove, { passive: false });
+sheetHandle.addEventListener('touchend', onTouchEnd);
+sheetHandle.addEventListener('touchcancel', onTouchEnd);
+
+// 在 scroll 容器顶部下拉时也允许 collapse (滚到最顶再下拉折叠)
+sidebarScroll.addEventListener('touchstart', (e) => {
+  if (!isMobileLayout() || !document.body.classList.contains('sidebar-expanded')) return;
+  if (sidebarScroll.scrollTop > 0) return; // 内部还能继续滚 — 不拦截
+  onTouchStart(e);
+}, { passive: true });
+sidebarScroll.addEventListener('touchmove', (e) => {
+  if (!dragging) return;
+  if (dragDelta < 0) { dragging = false; sidebarEl.style.transition = ''; sidebarEl.style.transform = ''; return; }
+  onTouchMove(e);
+}, { passive: false });
+sidebarScroll.addEventListener('touchend', onTouchEnd);
+
+// 初始: 移动端默认 peek (收起), 除非用户上次保存了 expanded
+if (isMobileLayout()) {
+  const saved = localStorage.getItem('sr_sheet_expanded');
+  setSheetExpanded(saved === '1');
+}
+// 窗口变化时重置
+window.addEventListener('resize', () => {
+  setTimeout(() => map.invalidateSize(), 100);
+});
+
+// 移动端点击 item 时自动收起 sheet 显示地图
+function maybeCollapseSheet() {
+  if (isMobileLayout() && document.body.classList.contains('sidebar-expanded')) {
+    setSheetExpanded(false);
+  }
+}
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap',
   maxZoom: 19
@@ -787,6 +993,8 @@ const namsan = {
 // tooltip 元素
 const tooltip = document.getElementById('tooltip');
 function showTooltip(r, x, y) {
+  // 触摸设备禁用 hover tooltip (避免 tap 触发幽灵悬停)
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return;
   const imgHtml = r.img
     ? `<img src="${r.img}" alt="${r.name}" onerror="this.style.display='none'">`
     : `<div class="no-img">暂无图片</div>`;
@@ -873,6 +1081,7 @@ function openModal(r) {
   renderModalImg();
   renderModalActions();
   modalMask.classList.add('show');
+  if (typeof maybeCollapseSheet === 'function') maybeCollapseSheet();
 }
 function closeModal() {
   modalMask.classList.remove('show');
