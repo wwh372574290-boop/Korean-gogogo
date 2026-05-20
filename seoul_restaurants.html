@@ -33,11 +33,31 @@
     border-radius: 4px;
   }
 
-  #map { position: absolute; top: 56px; left: 0; right: 340px; bottom: 0; }
+  #map { position: absolute; top: 56px; left: 0; right: 340px; bottom: 0; transition: right .25s ease; }
   #sidebar {
     position: absolute; top: 0; right: 0; bottom: 0; width: 340px;
     background: #fafafa; border-left: 1px solid #ddd; overflow-y: auto;
     box-sizing: border-box; padding: 16px;
+    transition: transform .25s ease;
+  }
+  body.sidebar-hidden #map { right: 0 !important; }
+  body.sidebar-hidden #sidebar { transform: translateX(100%); }
+
+  #sidebar-toggle {
+    position: absolute; top: 68px; right: 348px; z-index: 1100;
+    width: 32px; height: 60px; border: none; cursor: pointer;
+    background: #fff; color: #333; font-size: 14px; font-weight: bold;
+    border-radius: 6px 0 0 6px; box-shadow: -2px 2px 8px rgba(0,0,0,.18);
+    transition: right .25s ease, background .15s;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none;
+  }
+  #sidebar-toggle:hover { background: #f0f7ff; color: #0066cc; }
+  body.sidebar-hidden #sidebar-toggle { right: 0; border-radius: 6px 0 0 6px; }
+  @media (max-width: 700px) {
+    #sidebar { width: 86vw; }
+    #map { right: 86vw; }
+    #sidebar-toggle { right: calc(86vw + 8px); }
   }
   h1 { font-size: 18px; margin: 0 0 4px; }
   .sub { color: #888; font-size: 12px; margin-bottom: 12px; }
@@ -245,6 +265,8 @@
     </div>
   </div>
 </div>
+
+<button id="sidebar-toggle" title="折叠/展开侧栏">▶</button>
 
 <div id="sidebar">
   <h1>首尔美食 & 购物 · 64 家</h1>
@@ -664,6 +686,21 @@ Object.values(_dupMap).forEach(arr => {
 
 // 初始化地图
 const map = L.map('map').setView([37.5500, 126.9900], 12);
+
+// 侧栏折叠 / 展开 (持久化)
+const sidebarToggle = document.getElementById('sidebar-toggle');
+function setSidebarHidden(hidden) {
+  document.body.classList.toggle('sidebar-hidden', hidden);
+  sidebarToggle.textContent = hidden ? '◀' : '▶';
+  sidebarToggle.title = hidden ? '展开侧栏' : '折叠侧栏';
+  localStorage.setItem('sr_sidebar_hidden', hidden ? '1' : '0');
+  setTimeout(() => map.invalidateSize(), 270);
+}
+sidebarToggle.addEventListener('click', () => {
+  setSidebarHidden(!document.body.classList.contains('sidebar-hidden'));
+});
+// 初始化状态
+setSidebarHidden(localStorage.getItem('sr_sidebar_hidden') === '1');
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap',
   maxZoom: 19
