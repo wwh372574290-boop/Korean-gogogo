@@ -512,7 +512,7 @@
 <div id="sidebar">
   <div id="sheet-handle" role="button" aria-label="拖拽展开/收起"></div>
   <div class="sidebar-scroll">
-  <h1>首尔美食 & 购物 · 64 家</h1>
+  <h1>首尔美食 & 购物 · 66 家</h1>
   <div class="sub">铲屎老夏 · 推荐 · 鼠标悬停查看详情</div>
 
   <div class="legend">
@@ -559,8 +559,11 @@ const areaColor = {
   "圣水洞": "#27ae60",
   "弘大": "#3498db",
   "梨泰院": "#9b59b6",
+  "汉南洞": "#8e44ad",
   "新沙洞": "#e67e22",
   "北村": "#34495e",
+  "钟路": "#16a085",
+  "安岩洞": "#d35400",
   "多分店": "#7f8c8d",
   "位置待确认": "#95a5a6"
 };
@@ -581,6 +584,8 @@ const IMG = (f) => "图片/" + f;
 const IMG2 = (f) => "图片/1/" + f;
 const IMG4 = (f) => "图片/3/" + f;
 const IMG5 = (f) => "图片/4/" + f;
+const IMG_NAJU = (f) => "图片/najuog/" + f;
+const IMG_BONE = (f) => "图片/24-hour/" + f;
 const restaurantsRaw = [
   { id: 1,  name: "이가네갈비", area: "明洞",   cat: "韩餐主食", short: "辣排骨锅",
     img: IMG("7d859b98-4873-433e-b577-661f43c3f303.jpg"),
@@ -783,6 +788,10 @@ const coords = {
   ,62: [37.557545, 126.922873]  // Rilakkuma · Sumikko Plus (AK 3F · 微偏避免重叠)
   ,63: [37.551900, 126.924000]  // STAIN2O
   ,64: [37.557600, 126.920400]  // Daol Store 延南店
+
+  // ===== 第五批 汉南洞 (65-66) =====
+  ,65: [37.533220, 127.006140]  // 24-hour Bone Gamjatang 24시뼈다귀감자탕
+  ,66: [37.531380, 127.004860]  // Najuok 나주옥
 };
 
 // ===== 购物点 (圣水洞 10 家) =====
@@ -904,6 +913,37 @@ const extra2Raw = [
     desc: "超大的潮玩店，超多三丽鸥和轻松熊\n目不暇接，攻略主最喜欢的一家\n位于延南洞 (Yeonnam-dong)\nHello Kitty 限定 / 美乐蒂 / 库洛米 / 玉桂狗 / 角落生物 / 龙猫 应有尽有" }
 ];
 restaurantsRaw.push(...extra2Raw);
+
+// ===== 第五批 汉南洞 韩餐 2 家 =====
+const extra3Raw = [
+  { id: 65, name: "24-hour Bone Gamjatang 24시뼈다귀감자탕", area: "汉南洞", cat: "韩餐主食", short: "24h 土豆脊骨汤·人均 1w₩",
+    img: IMG_BONE("2ff18f70-13bc-49b5-8cad-b9992f794f71.jpg"),
+    imgs: [
+      IMG_BONE("2ff18f70-13bc-49b5-8cad-b9992f794f71.jpg"),
+      IMG_BONE("4a41b18e-31f3-4615-9f93-8a9b15805327.jpg"),
+      IMG_BONE("af650116-80d6-4890-9c85-3ccdc4285d8d.jpg"),
+      IMG_BONE("b4aae622-f07b-4399-8643-062c7e83cfa6.jpg"),
+      IMG_BONE("bf044548-68dc-48b4-bf2d-e266c55f6e8c.jpg"),
+      IMG_BONE("eacd6692-2afd-4d0f-bb66-7e82000d7c43.jpg"),
+      IMG_BONE("f2c82b71-c8bf-49e7-bf7d-f80cf64294dc.jpg"),
+      IMG_BONE("f665a0b4-3bba-4616-9683-e57c9c628d50.jpg")
+    ],
+    desc: "汉南洞韩式猪骨汤·24 小时营业\n超大块脊骨 · 炒饭也不错\n招牌: 뼈해장국 (醒酒汤) / 뼈찜 (辣炖排骨)\n人均 8,000 ~ 15,000₩\n⭐ 4.2 / 5.0 (Google 1156 评)\n📍 73 Daesagwan-ro, Hannam-dong\n店在小道里·主路看不到\n小道入口旁有 Paris Baguette + Olive Young\n💡 饭点排队·建议错峰\n小菜免费续盘 · 本地人氛围浓" },
+
+  { id: 66, name: "Najuok 나주옥", area: "汉南洞", cat: "韩餐主食", short: "汉南洞韩餐·local 老店",
+    img: IMG_NAJU("1a345d7c-3039-4fc4-8b88-53cb03ac9678.jpg"),
+    imgs: [
+      IMG_NAJU("1a345d7c-3039-4fc4-8b88-53cb03ac9678.jpg"),
+      IMG_NAJU("374d7358-1c41-4419-8957-c60d5a0f0c33.jpg"),
+      IMG_NAJU("44402bb2-db90-4403-80ee-71114d9f9c98.jpg"),
+      IMG_NAJU("5d637d31-6b59-4649-8abb-005caf574bbd.jpg"),
+      IMG_NAJU("72904735-27f6-474a-bb57-9c9e577c6b92.jpg"),
+      IMG_NAJU("964f3ebe-ed6e-4ff4-b71d-8a60ede0cb18.jpg"),
+      IMG_NAJU("a512a460-0aa8-49ec-a9f3-ece55760b0ac.jpg")
+    ],
+    desc: "汉南洞 (Hannam-dong) 韩餐\n📍 47 Daesagwan-ro, Yongsan-gu, Seoul\n⚠️ 谷歌评论缺失·疑似新店或仅 Naver/Kakao 收录\nNaver Map 搜 \"나주옥\" 导航更准" }
+];
+restaurantsRaw.push(...extra3Raw);
 
 const restaurants = restaurantsRaw.map(r => {
   const co = coords[r.id];
@@ -1448,7 +1488,7 @@ const listEl = document.getElementById('list');
 const sideItems = {}; // id -> dom element
 const groups = {};
 restaurants.forEach(r => { (groups[r.area] = groups[r.area] || []).push(r); });
-const areaOrder = ["明洞","圣水洞","弘大","梨泰院","新沙洞","北村","钟路","安岩洞","多分店","位置待确认"];
+const areaOrder = ["明洞","圣水洞","弘大","梨泰院","汉南洞","新沙洞","北村","钟路","安岩洞","多分店","位置待确认"];
 const groupEls = {};
 const collapsedGroups = new Set(JSON.parse(localStorage.getItem('sr_collapsed') || '[]'));
 function saveCollapsed() {
