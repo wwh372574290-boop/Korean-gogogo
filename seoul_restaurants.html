@@ -444,6 +444,27 @@
   .ds-page .ds-area { color: #2a73d9; font-size: 13px; }
   .ds-page .ds-short { color: #555; font-size: 13px; margin: 6px 0 12px; }
   .ds-page .ds-desc { color: #333; font-size: 14px; line-height: 1.6; white-space: pre-line; }
+  .ds-page .ds-desc.edited::after {
+    content: "已编辑"; display: inline-block; margin-left: 6px;
+    background: #fff3cd; color: #8a6d3b; font-size: 10px;
+    padding: 1px 6px; border-radius: 8px; vertical-align: middle;
+  }
+  .ds-page .ds-actions {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px;
+  }
+  .ds-act-btn {
+    flex: 1 1 auto; min-width: 90px; min-height: 40px;
+    padding: 0 14px; font-size: 13px; font-weight: 600;
+    border: 1.5px solid #ddd; border-radius: 8px;
+    background: #fff; color: #333; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: all .15s;
+  }
+  .ds-act-btn:hover { border-color: #999; }
+  .ds-act-btn.on-like { background: #ff4d6d; color: #fff; border-color: #ff4d6d; }
+  .ds-act-btn.on-hide { background: #555; color: #fff; border-color: #555; }
+  .ds-act-btn.edit { background: #e0ecff; color: #0066cc; border-color: #b7d3ff; }
+  .ds-act-btn.edit:hover { background: #d0e0ff; }
   .ds-page .ds-hint {
     text-align: center; color: #aaa; font-size: 11px; padding: 8px 0 12px;
   }
@@ -1026,10 +1047,15 @@ function buildDetailsSwipe(data) {
     const page = document.createElement('div');
     page.className = 'ds-page';
     page.dataset.idx = idx;
+    page.dataset.id = r.id;
     const imgs = (r.imgs && r.imgs.length) ? r.imgs : (r.img ? [r.img] : []);
     const first = imgs[0] || '';
     const imgStyle = first ? `background-image:url('${first.replace(/'/g, "\\'")}')` : '';
     const navHtml = imgs.length > 1 ? `<div class="ds-img-nav">1 / ${imgs.length}</div>` : '';
+    const descText = (typeof getDescFor === 'function') ? getDescFor(r) : (r.desc || '');
+    const edited = (typeof isDescOverridden === 'function') && isDescOverridden(r);
+    const isLiked = (typeof userState !== 'undefined') && userState.liked.has(r.id);
+    const isHidden = (typeof userState !== 'undefined') && userState.hidden.has(r.id);
     page.innerHTML = `
       <div class="ds-img" style="${imgStyle}">${navHtml}</div>
       <div class="ds-body">
@@ -1040,20 +1066,56 @@ function buildDetailsSwipe(data) {
         </div>
         <div class="ds-area">📍 ${escapeHTML(r.area)} · ${escapeHTML(r.cat)}${r.lat == null ? ' · [无坐标]' : ''}</div>
         <div class="ds-short">${escapeHTML(r.short || '')}</div>
-        <div class="ds-desc">${escapeHTML(typeof getDescFor === 'function' ? getDescFor(r) : (r.desc || ''))}</div>
+        <div class="ds-desc${edited ? ' edited' : ''}">${escapeHTML(descText)}</div>
+        <div class="ds-actions">
+          <button class="ds-act-btn ${isLiked ? 'on-like' : ''}" data-act="like">${isLiked ? '💔 取消喜欢' : '❤️ 喜欢'}</button>
+          <button class="ds-act-btn ${isHidden ? 'on-hide' : ''}" data-act="hide">${isHidden ? '👁 取消隐藏' : '🙈 隐藏'}</button>
+          <button class="ds-act-btn edit" data-act="edit">✏️ 编辑描述</button>
+        </div>
         <div class="ds-hint">${idx + 1} / ${data.length} · 上下滑动切换 · ✕ 返回列表</div>
       </div>`;
     detailsSwipeEl.appendChild(page);
     swipePages.push(page);
   });
-  // 委托复制
-  detailsSwipeEl.addEventListener('click', swipeCopyHandler);
 }
-function swipeCopyHandler(e) {
-  const btn = e.target.closest('.copy-btn');
-  if (!btn) return;
+
+// 委托: 复制 / 喜欢 / 隐藏 / 编辑
+detailsSwipeEl.addEventListener('click', (e) => {
+  const copyBtn = e.target.closest('.copy-btn');
+  if (copyBtn) {
+    e.stopPropagation();
+    copyToClipboard(copyBtn.getAttribute('data-copy'), copyBtn);
+    return;
+  }
+  const actBtn = e.target.closest('.ds-act-btn');
+  if (!actBtn) return;
   e.stopPropagation();
-  copyToClipboard(btn.getAttribute('data-copy'), btn);
+  const page = actBtn.closest('.ds-page');
+  if (!page) return;
+  const id = Number(page.dataset.id);
+  const r = restaurants.find(x => x.id === id);
+  if (!r) return;
+  const act = actBtn.getAttribute('data-act');
+  if (act === 'like') {
+    toggleLike(id);
+    refreshSwipePageActions(page, id);
+  } else if (act === 'hide') {
+    toggleHide(id);
+    refreshSwipePageActions(page, id);
+  } else if (act === 'edit') {
+    // 调出 modal 编辑 desc (复用 modal 的编辑 UI)
+    openModal(r);
+    if (typeof enterDescEdit === 'function') setTimeout(() => enterDescEdit(r), 50);
+  }
+});
+
+function refreshSwipePageActions(page, id) {
+  const liked = userState.liked.has(id);
+  const hidden = userState.hidden.has(id);
+  const lb = page.querySelector('[data-act="like"]');
+  const hb = page.querySelector('[data-act="hide"]');
+  if (lb) { lb.className = 'ds-act-btn' + (liked ? ' on-like' : ''); lb.textContent = liked ? '💔 取消喜欢' : '❤️ 喜欢'; }
+  if (hb) { hb.className = 'ds-act-btn' + (hidden ? ' on-hide' : ''); hb.textContent = hidden ? '👁 取消隐藏' : '🙈 隐藏'; }
 }
 
 function setDetailsView(v) {
@@ -1279,6 +1341,7 @@ mDescSave.addEventListener('click', () => {
   }
   saveDescOverrides();
   renderModalDesc(r);
+  syncSwipePageDesc(r.id);
 });
 mDescReset.addEventListener('click', () => {
   if (!currentModalItem) return;
@@ -1286,7 +1349,21 @@ mDescReset.addEventListener('click', () => {
   delete descOverrides[r.id];
   saveDescOverrides();
   renderModalDesc(r);
+  syncSwipePageDesc(r.id);
 });
+
+// 同步 swipe page 的 desc 显示 (当 modal 内编辑保存后)
+function syncSwipePageDesc(id) {
+  const page = detailsSwipeEl && detailsSwipeEl.querySelector(`.ds-page[data-id="${id}"]`);
+  if (!page) return;
+  const r = restaurants.find(x => x.id === id);
+  if (!r) return;
+  const descEl = page.querySelector('.ds-desc');
+  if (descEl) {
+    descEl.textContent = getDescFor(r);
+    descEl.classList.toggle('edited', isDescOverridden(r));
+  }
+}
 // Cmd/Ctrl+Enter 快捷保存
 mDescTa.addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
