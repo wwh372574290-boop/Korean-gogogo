@@ -18,7 +18,7 @@
   }
   button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
   #topbar {
-    position: absolute; top: 0; left: 0; right: 340px; height: 56px;
+    position: absolute; top: 0; left: 0; right: 0; height: 56px;
     background: #fff; border-bottom: 1px solid #ddd; z-index: 500;
     display: flex; align-items: center; gap: 6px;
     padding: 0 14px; overflow-x: auto; white-space: nowrap;
@@ -44,32 +44,23 @@
     border-radius: 4px;
   }
 
-  #map { position: absolute; top: 56px; left: 0; right: 340px; bottom: 0; transition: right .25s ease; }
+  #map { position: absolute; top: 56px; left: 0; right: 0; bottom: 0; }
   #sidebar {
-    position: absolute; top: 0; right: 0; bottom: 0; width: 340px;
-    background: #fafafa; border-left: 1px solid #ddd; overflow-y: auto;
-    box-sizing: border-box; padding: 16px;
-    transition: transform .25s ease;
+    /* sidebar DOM 在初始化后会被移到 #details-overlay 内; 这里给它在 overlay 内的样式 */
+    width: 100%; max-width: 760px; margin: 0 auto;
+    background: transparent; border: none; overflow: visible;
+    box-sizing: border-box; padding: 14px 16px 60px;
   }
-  body.sidebar-hidden #map { right: 0 !important; }
-  body.sidebar-hidden #sidebar { transform: translateX(100%); }
-
-  #sidebar-toggle {
-    position: absolute; top: 68px; right: 348px; z-index: 1100;
-    width: 32px; height: 60px; border: none; cursor: pointer;
-    background: #fff; color: #333; font-size: 14px; font-weight: bold;
-    border-radius: 6px 0 0 6px; box-shadow: -2px 2px 8px rgba(0,0,0,.18);
-    transition: right .25s ease, background .15s;
-    display: flex; align-items: center; justify-content: center;
-    user-select: none;
-  }
-  #sidebar-toggle:hover { background: #f0f7ff; color: #0066cc; }
-  body.sidebar-hidden #sidebar-toggle { right: 0; border-radius: 6px 0 0 6px; }
+  /* 不再使用的旧按钮 / handle 一律隐藏 */
+  #sidebar-toggle, #sheet-handle { display: none !important; }
+  .sidebar-scroll { overflow: visible !important; max-height: none !important; }
+  /* 旧 body.sidebar-hidden / sidebar-expanded 等状态不再生效 */
+  body.sidebar-hidden #map, body.sidebar-expanded #map { right: 0 !important; }
 
   /* sheet drag handle (移动端可见, 桌面端隐藏) */
   #sheet-handle { display: none; }
 
-  /* ===== iPhone / 移动端: 改为底部抽屉 ===== */
+  /* ===== iPhone / 移动端 ===== */
   @media (max-width: 768px), (pointer: coarse) and (max-width: 900px) {
     /* 顶部筛选条 */
     #topbar {
@@ -89,68 +80,13 @@
     #map {
       top: calc(52px + env(safe-area-inset-top));
       right: 0; bottom: 0;
-      transition: none;
     }
 
-    /* 侧栏 = 底部 sheet, 默认 peek 状态 */
-    #sidebar {
-      top: auto; left: 0; right: 0; width: 100%;
-      bottom: 0;
-      height: 88vh;
-      max-height: 88vh;
-      border-left: none;
-      border-top-left-radius: 18px;
-      border-top-right-radius: 18px;
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.18);
-      padding: 0 16px 16px;
-      padding-bottom: calc(16px + env(safe-area-inset-bottom));
-      transform: translateY(calc(88vh - 110px));
-      transition: transform .3s cubic-bezier(.2,.9,.3,1);
-      overflow: hidden;
-      touch-action: pan-y;
-    }
-    /* 关闭原 transform 的 sidebar-hidden 行为 */
-    body.sidebar-hidden #sidebar {
-      transform: translateY(calc(88vh - 110px)) !important;
-    }
-    body.sidebar-expanded #sidebar { transform: translateY(0); }
-    body.sidebar-expanded #sidebar .sidebar-scroll { overflow-y: auto; }
-
-    /* 内部滚动容器 */
-    #sidebar .sidebar-scroll {
-      max-height: calc(88vh - 56px);
-      overflow-y: hidden;
-      -webkit-overflow-scrolling: touch;
-      padding-top: 4px;
-    }
-
-    /* drag handle 把手 (移动端可见) */
-    #sheet-handle {
-      display: flex;
-      position: sticky; top: 0;
-      height: 32px; margin: 0 -16px 4px;
-      background: #fafafa;
-      align-items: center; justify-content: center;
-      cursor: grab; user-select: none;
-      z-index: 5;
-      border-top-left-radius: 18px;
-      border-top-right-radius: 18px;
-    }
-    #sheet-handle::before {
-      content: ''; width: 40px; height: 5px;
-      background: #d0d0d0; border-radius: 3px;
-    }
-    body.sidebar-expanded #sheet-handle { cursor: grab; }
-
-    /* 隐藏桌面的折叠按钮, 改用 handle 拖拽 */
-    #sidebar-toggle { display: none; }
-
-    /* 移动端 sheet header 简化 */
+    /* sidebar 在 overlay 内 = 移动端列表样式 */
+    #sidebar { padding: 8px 12px 80px; }
     #sidebar h1 { font-size: 16px; padding-top: 4px; margin: 0 0 2px; }
     #sidebar .sub { font-size: 11px; margin-bottom: 8px; }
     #sidebar .legend { padding: 8px; margin-bottom: 10px; }
-
-    /* item 触摸目标加大 */
     #sidebar .item { padding: 10px 6px; min-height: 56px; }
     #sidebar .copy-btn { padding: 4px 10px; font-size: 13px; line-height: 18px; min-width: 36px; }
     #sidebar .group h3 { padding: 8px 0; font-size: 14px; min-height: 32px; }
@@ -396,18 +332,17 @@
 
   /* ===== 详情页 (全屏 list ↔ swipe overlay) ===== */
   #details-toggle {
-    position: absolute; top: 68px; right: 352px; z-index: 1100;
+    position: absolute; top: 68px; right: 12px; z-index: 1100;
     height: 36px; padding: 0 14px;
     background: #fff; color: #333; border: 1px solid #ddd;
     border-radius: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.15);
     cursor: pointer; font-size: 13px; font-weight: 600;
     display: inline-flex; align-items: center; gap: 6px;
-    transition: right .25s ease, background .15s, color .15s;
+    transition: background .15s, color .15s;
     user-select: none;
   }
   #details-toggle:hover { background: #f0f7ff; color: #0066cc; }
   #details-toggle.active { background: #0066cc; color: #fff; border-color: #0066cc; }
-  body.sidebar-hidden #details-toggle { right: 12px; }
   @media (max-width: 768px), (pointer: coarse) and (max-width: 900px) {
     #details-toggle {
       right: 12px;
@@ -441,7 +376,7 @@
 
   #details-list {
     flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch;
-    padding: 12px 12px 60px; display: none;
+    padding: 0; display: none;
     overscroll-behavior: contain;
   }
   #details-overlay.view-list #details-list { display: block; }
@@ -1047,113 +982,16 @@ Object.values(_dupMap).forEach(arr => {
 // 初始化地图
 const map = L.map('map').setView([37.5500, 126.9900], 12);
 
-// 侧栏折叠 / 展开 (持久化)
-const sidebarToggle = document.getElementById('sidebar-toggle');
-function setSidebarHidden(hidden) {
-  document.body.classList.toggle('sidebar-hidden', hidden);
-  sidebarToggle.textContent = hidden ? '◀' : '▶';
-  sidebarToggle.title = hidden ? '展开侧栏' : '折叠侧栏';
-  localStorage.setItem('sr_sidebar_hidden', hidden ? '1' : '0');
-  setTimeout(() => map.invalidateSize(), 270);
-}
-sidebarToggle.addEventListener('click', () => {
-  setSidebarHidden(!document.body.classList.contains('sidebar-hidden'));
-});
-// 初始化状态
-setSidebarHidden(localStorage.getItem('sr_sidebar_hidden') === '1');
-
-// ========== 移动端 bottom sheet 拖拽 / 点击切换 ==========
+// (旧 sidebar 折叠 / bottom sheet 逻辑已废弃, 详情入口统一为顶部 📋 按钮)
 const isTouchDevice = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window;
-const sheetHandle = document.getElementById('sheet-handle');
 const sidebarEl = document.getElementById('sidebar');
-const sidebarScroll = sidebarEl.querySelector('.sidebar-scroll');
 function isMobileLayout() { return window.matchMedia('(max-width: 768px)').matches; }
-function setSheetExpanded(expanded) {
-  document.body.classList.toggle('sidebar-expanded', expanded);
-  localStorage.setItem('sr_sheet_expanded', expanded ? '1' : '0');
-  setTimeout(() => map.invalidateSize(), 320);
-}
-function toggleSheet() { setSheetExpanded(!document.body.classList.contains('sidebar-expanded')); }
+function maybeCollapseSheet() { /* no-op kept for compatibility */ }
 
-// 单击 handle 切换
-sheetHandle.addEventListener('click', (e) => {
-  if (!isMobileLayout()) return;
-  toggleSheet();
-});
-
-// 触摸拖拽
-let dragStartY = 0, dragStartT = 0, dragging = false, dragStartExpanded = false, dragDelta = 0;
-function onTouchStart(e) {
-  if (!isMobileLayout()) return;
-  const t = e.touches[0];
-  dragStartY = t.clientY;
-  dragStartT = Date.now();
-  dragging = true;
-  dragStartExpanded = document.body.classList.contains('sidebar-expanded');
-  dragDelta = 0;
-  sidebarEl.style.transition = 'none';
-}
-function onTouchMove(e) {
-  if (!dragging) return;
-  const t = e.touches[0];
-  dragDelta = t.clientY - dragStartY;
-  const baseY = dragStartExpanded ? 0 : (window.innerHeight * 0.88 - 110);
-  let y = baseY + dragDelta;
-  const maxY = window.innerHeight * 0.88 - 110;
-  if (y < 0) y = y * 0.3; // 拉过头阻尼
-  if (y > maxY) y = maxY + (y - maxY) * 0.3;
-  sidebarEl.style.transform = `translateY(${y}px)`;
-  e.preventDefault();
-}
-function onTouchEnd() {
-  if (!dragging) return;
-  dragging = false;
-  sidebarEl.style.transition = '';
-  sidebarEl.style.transform = '';
-  const dt = Date.now() - dragStartT;
-  const velocity = dragDelta / Math.max(dt, 1); // px/ms
-  // 决策: 速度优先, 距离次之
-  let expand = dragStartExpanded;
-  if (velocity < -0.3) expand = true;      // 快速上滑
-  else if (velocity > 0.3) expand = false; // 快速下滑
-  else if (Math.abs(dragDelta) > 80)        // 慢速但距离够
-    expand = dragDelta < 0;
-  setSheetExpanded(expand);
-}
-sheetHandle.addEventListener('touchstart', onTouchStart, { passive: true });
-sheetHandle.addEventListener('touchmove', onTouchMove, { passive: false });
-sheetHandle.addEventListener('touchend', onTouchEnd);
-sheetHandle.addEventListener('touchcancel', onTouchEnd);
-
-// 在 scroll 容器顶部下拉时也允许 collapse (滚到最顶再下拉折叠)
-sidebarScroll.addEventListener('touchstart', (e) => {
-  if (!isMobileLayout() || !document.body.classList.contains('sidebar-expanded')) return;
-  if (sidebarScroll.scrollTop > 0) return; // 内部还能继续滚 — 不拦截
-  onTouchStart(e);
-}, { passive: true });
-sidebarScroll.addEventListener('touchmove', (e) => {
-  if (!dragging) return;
-  if (dragDelta < 0) { dragging = false; sidebarEl.style.transition = ''; sidebarEl.style.transform = ''; return; }
-  onTouchMove(e);
-}, { passive: false });
-sidebarScroll.addEventListener('touchend', onTouchEnd);
-
-// 初始: 移动端默认 peek (收起), 除非用户上次保存了 expanded
-if (isMobileLayout()) {
-  const saved = localStorage.getItem('sr_sheet_expanded');
-  setSheetExpanded(saved === '1');
-}
-// 窗口变化时重置
+// 窗口变化时刷新地图
 window.addEventListener('resize', () => {
   setTimeout(() => map.invalidateSize(), 100);
 });
-
-// 移动端点击 item 时自动收起 sheet 显示地图
-function maybeCollapseSheet() {
-  if (isMobileLayout() && document.body.classList.contains('sidebar-expanded')) {
-    setSheetExpanded(false);
-  }
-}
 
 // ========== 详情页 overlay (list ↔ swipe) ==========
 const detailsToggle = document.getElementById('details-toggle');
@@ -1174,23 +1012,10 @@ function getCurrentDataset() {
 }
 
 function buildDetailsList() {
+  // 详情入口统一: list 视图复用 sidebar 折叠分组 (已 move 进 details-list 容器)
+  // 仅需重建 swipe 页面以反映最新筛选
   const data = getCurrentDataset();
-  detailsListEl.innerHTML = '';
   detailsSubEl.textContent = ' · 共 ' + data.length + ' 家';
-  data.forEach((r, idx) => {
-    const card = document.createElement('div');
-    card.className = 'dl-card' + (r.lat == null ? ' no-loc' : '');
-    const thumbStyle = r.img ? `background-image:url('${r.img.replace(/'/g, "\\'")}')` : '';
-    card.innerHTML = `
-      <div class="dl-thumb" style="${thumbStyle}"></div>
-      <div class="dl-body">
-        <div class="dl-name"><span class="dl-id">#${r.id}</span><span>${escapeHTML(r.name)}</span></div>
-        <div class="dl-meta">${escapeHTML(r.area)} · ${escapeHTML(r.cat)}</div>
-        <div class="dl-short">${escapeHTML(r.short || '')}</div>
-      </div>`;
-    card.addEventListener('click', () => enterSwipeView(idx));
-    detailsListEl.appendChild(card);
-  });
   buildDetailsSwipe(data);
 }
 
@@ -1696,8 +1521,15 @@ areaOrder.forEach(area => {
       <span class="item-flag"></span>`;
     it.onclick = (e) => {
       if (e.target.closest('.copy-btn')) return;
-      if (!noLoc) map.setView([r.lat, r.lng], 15, { animate: true });
-      openModal(r);
+      // 进入全屏 swipe view (该店所在索引)
+      const data = (typeof getCurrentDataset === 'function') ? getCurrentDataset() : restaurants;
+      const idx = data.findIndex(d => d.id === r.id);
+      if (idx >= 0 && typeof enterSwipeView === 'function') {
+        enterSwipeView(idx);
+      } else {
+        if (!noLoc) map.setView([r.lat, r.lng], 15, { animate: true });
+        openModal(r);
+      }
     };
     it.addEventListener('mouseenter', () => {
       const rect = it.getBoundingClientRect();
@@ -1719,6 +1551,16 @@ listEl.addEventListener('click', (e) => {
   const txt = btn.getAttribute('data-copy');
   if (txt) copyToClipboard(txt, btn);
 });
+
+// 把整个 #sidebar 节点移入 #details-overlay 的列表容器内
+// — 详情按钮成为唯一入口, sidebar 折叠分组复用为列表样式
+(function moveSidebarIntoDetails() {
+  const listSlot = document.getElementById('details-list');
+  if (listSlot && sidebarEl) {
+    listSlot.innerHTML = '';
+    listSlot.appendChild(sidebarEl);
+  }
+})();
 
 // ===== 用户状态: 喜欢 / 隐藏 (localStorage 持久化) =====
 const userState = {
