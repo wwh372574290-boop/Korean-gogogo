@@ -300,7 +300,52 @@
   #modal .m-title { font-size: 22px; font-weight: 700; margin: 0 0 6px; }
   #modal .m-area { color: #2a73d9; font-size: 13px; margin-bottom: 4px; }
   #modal .m-short { color: #888; font-size: 13px; margin-bottom: 18px; }
-  #modal .m-desc { color: #333; font-size: 14px; line-height: 1.7; white-space: pre-line; }
+  #modal .m-desc { color: #333; font-size: 14px; line-height: 1.7; white-space: pre-line; flex: 1; }
+
+  .m-desc-wrap {
+    position: relative; display: flex; align-items: flex-start; gap: 8px;
+    padding-right: 4px;
+  }
+  .m-desc-edit {
+    flex: 0 0 auto; align-self: flex-start;
+    height: 28px; padding: 0 10px; font-size: 12px; font-weight: 600;
+    background: #f0f0f0; color: #555; border: none; border-radius: 14px;
+    cursor: pointer; transition: background .15s, color .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .m-desc-edit:hover { background: #e0ecff; color: #0066cc; }
+  .m-desc.edited::after {
+    content: "已编辑"; display: inline-block; margin-left: 6px;
+    background: #fff3cd; color: #8a6d3b; font-size: 10px;
+    padding: 1px 6px; border-radius: 8px; vertical-align: middle;
+  }
+
+  .m-desc-editor textarea {
+    width: 100%; min-height: 140px; max-height: 50vh; resize: vertical;
+    box-sizing: border-box; padding: 10px 12px;
+    font-family: inherit; font-size: 14px; line-height: 1.6;
+    border: 1.5px solid #d0d0d0; border-radius: 8px;
+    outline: none; transition: border-color .15s;
+    background: #fafafa; color: #222;
+  }
+  .m-desc-editor textarea:focus { border-color: #0066cc; background: #fff; }
+  .m-desc-bar {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 8px; flex-wrap: wrap;
+  }
+  .m-desc-hint { font-size: 11px; color: #999; margin-right: auto; }
+  .m-desc-btn {
+    height: 32px; padding: 0 14px; font-size: 13px; font-weight: 600;
+    border: none; border-radius: 8px; cursor: pointer;
+    -webkit-tap-highlight-color: transparent; transition: opacity .15s, background .15s;
+  }
+  .m-desc-btn.cancel { background: #eee; color: #555; }
+  .m-desc-btn.cancel:hover { background: #ddd; }
+  .m-desc-btn.reset { background: #fff3cd; color: #8a6d3b; }
+  .m-desc-btn.reset:hover { background: #ffe699; }
+  .m-desc-btn.save { background: #0066cc; color: #fff; }
+  .m-desc-btn.save:hover { background: #0052a3; }
+  .m-desc-btn:disabled { opacity: 0.45; cursor: not-allowed; }
   #modal .m-actions { display: flex; gap: 8px; margin-top: 16px; }
   #modal .m-act-btn {
     flex: 1; padding: 9px 12px; border-radius: 8px;
@@ -501,7 +546,19 @@
       <button class="copy-btn" id="m-copy" title="复制店名" style="margin:4px 0 8px;">📋 复制店名</button>
       <div class="m-area" id="m-area"></div>
       <div class="m-short" id="m-short"></div>
-      <div class="m-desc" id="m-desc"></div>
+      <div class="m-desc-wrap">
+        <div class="m-desc" id="m-desc"></div>
+        <button class="m-desc-edit" id="m-desc-edit" title="编辑描述">✏️ 编辑</button>
+      </div>
+      <div class="m-desc-editor" id="m-desc-editor" style="display:none;">
+        <textarea id="m-desc-ta" placeholder="输入你的描述... (支持换行)"></textarea>
+        <div class="m-desc-bar">
+          <span class="m-desc-hint" id="m-desc-hint">仅保存在本设备</span>
+          <button class="m-desc-btn cancel" id="m-desc-cancel">取消</button>
+          <button class="m-desc-btn reset" id="m-desc-reset" title="恢复为默认">恢复默认</button>
+          <button class="m-desc-btn save" id="m-desc-save">保存</button>
+        </div>
+      </div>
       <div class="m-actions" id="m-actions"></div>
     </div>
   </div>
@@ -1158,7 +1215,7 @@ function buildDetailsSwipe(data) {
         </div>
         <div class="ds-area">📍 ${escapeHTML(r.area)} · ${escapeHTML(r.cat)}${r.lat == null ? ' · [无坐标]' : ''}</div>
         <div class="ds-short">${escapeHTML(r.short || '')}</div>
-        <div class="ds-desc">${escapeHTML(r.desc || '')}</div>
+        <div class="ds-desc">${escapeHTML(typeof getDescFor === 'function' ? getDescFor(r) : (r.desc || ''))}</div>
         <div class="ds-hint">${idx + 1} / ${data.length} · 上下滑动切换 · ✕ 返回列表</div>
       </div>`;
     detailsSwipeEl.appendChild(page);
@@ -1319,7 +1376,7 @@ function showTooltip(r, x, y) {
     <div class="tt-body">
       <div class="tt-title">${r.id}. ${r.name}</div>
       <div class="tt-area">📍 ${r.area} · ${r.short}</div>
-      <div class="tt-desc">${r.desc}</div>
+      <div class="tt-desc">${typeof getDescFor === 'function' ? getDescFor(r) : r.desc}</div>
     </div>`;
   tooltip.style.display = 'block';
   // 位置：靠右靠下，避免超出
@@ -1342,6 +1399,79 @@ const mTitle = document.getElementById('m-title');
 const mArea = document.getElementById('m-area');
 const mShort = document.getElementById('m-short');
 const mDesc = document.getElementById('m-desc');
+const mDescEdit = document.getElementById('m-desc-edit');
+const mDescEditor = document.getElementById('m-desc-editor');
+const mDescTa = document.getElementById('m-desc-ta');
+const mDescSave = document.getElementById('m-desc-save');
+const mDescCancel = document.getElementById('m-desc-cancel');
+const mDescReset = document.getElementById('m-desc-reset');
+const mDescHint = document.getElementById('m-desc-hint');
+
+// ===== desc 本地编辑 (per-id overrides 持久化) =====
+const descOverrides = JSON.parse(localStorage.getItem('sr_desc_overrides') || '{}');
+function saveDescOverrides() {
+  localStorage.setItem('sr_desc_overrides', JSON.stringify(descOverrides));
+}
+function getDescFor(r) {
+  const ov = descOverrides[r.id];
+  return (ov != null) ? ov : (r.desc || '');
+}
+function isDescOverridden(r) {
+  return descOverrides[r.id] != null;
+}
+function renderModalDesc(r) {
+  mDesc.textContent = getDescFor(r);
+  mDesc.classList.toggle('edited', isDescOverridden(r));
+  // 退出编辑态
+  mDescEditor.style.display = 'none';
+  mDesc.style.display = '';
+  mDescEdit.style.display = '';
+  mDescReset.style.display = isDescOverridden(r) ? '' : 'none';
+}
+function enterDescEdit(r) {
+  mDescTa.value = getDescFor(r);
+  mDescEditor.style.display = '';
+  mDesc.style.display = 'none';
+  mDescEdit.style.display = 'none';
+  mDescReset.style.display = isDescOverridden(r) ? '' : 'none';
+  setTimeout(() => mDescTa.focus(), 0);
+}
+mDescEdit.addEventListener('click', () => {
+  if (currentModalItem) enterDescEdit(currentModalItem);
+});
+mDescCancel.addEventListener('click', () => {
+  if (currentModalItem) renderModalDesc(currentModalItem);
+});
+mDescSave.addEventListener('click', () => {
+  if (!currentModalItem) return;
+  const r = currentModalItem;
+  const v = mDescTa.value;
+  if (v === (r.desc || '')) {
+    // 与原 desc 相同 → 视为清除 override
+    delete descOverrides[r.id];
+  } else {
+    descOverrides[r.id] = v;
+  }
+  saveDescOverrides();
+  renderModalDesc(r);
+});
+mDescReset.addEventListener('click', () => {
+  if (!currentModalItem) return;
+  const r = currentModalItem;
+  delete descOverrides[r.id];
+  saveDescOverrides();
+  renderModalDesc(r);
+});
+// Cmd/Ctrl+Enter 快捷保存
+mDescTa.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    e.preventDefault();
+    mDescSave.click();
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    mDescCancel.click();
+  }
+});
 
 // 轮播状态
 let currentImgs = [];
@@ -1391,7 +1521,7 @@ function openModal(r) {
   if (mCopy) mCopy.onclick = () => copyToClipboard(r.name, mCopy);
   mArea.textContent = "📍 " + r.area;
   mShort.textContent = r.short;
-  mDesc.textContent = r.desc;
+  renderModalDesc(r);
   currentImgs = r.imgs && r.imgs.length ? r.imgs.slice() : (r.img ? [r.img] : []);
   currentImgIdx = 0;
   renderModalImg();
