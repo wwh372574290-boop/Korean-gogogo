@@ -512,7 +512,7 @@
 <div id="sidebar">
   <div id="sheet-handle" role="button" aria-label="拖拽展开/收起"></div>
   <div class="sidebar-scroll">
-  <h1>首尔美食 & 购物 · 66 家</h1>
+  <h1>首尔美食 & 购物 · 67 家</h1>
   <div class="sub">铲屎老夏 · 推荐 · 鼠标悬停查看详情</div>
 
   <div class="legend">
@@ -586,6 +586,7 @@ const IMG4 = (f) => "图片/3/" + f;
 const IMG5 = (f) => "图片/4/" + f;
 const IMG_NAJU = (f) => "图片/najuog/" + f;
 const IMG_BONE = (f) => "图片/24-hour/" + f;
+const IMG_SALT = (f) => "图片/盐面包/" + f;
 const restaurantsRaw = [
   { id: 1,  name: "이가네갈비", area: "明洞",   cat: "韩餐主食", short: "辣排骨锅",
     img: IMG("7d859b98-4873-433e-b577-661f43c3f303.jpg"),
@@ -792,6 +793,9 @@ const coords = {
   // ===== 第五批 汉南洞 (65-66) =====
   ,65: [37.533220, 127.006140]  // 24-hour Bone Gamjatang 24시뼈다귀감자탕
   ,66: [37.531380, 127.004860]  // Najuok 나주옥
+
+  // ===== 第六批 圣水洞 (67) =====
+  ,67: [37.541480, 127.054430]  // 자연도 소금빵 Jayeondo Sogeumppang
 };
 
 // ===== 购物点 (圣水洞 10 家) =====
@@ -941,7 +945,22 @@ const extra3Raw = [
       IMG_NAJU("f2c82b71-c8bf-49e7-bf7d-f80cf64294dc.jpg"),
       IMG_NAJU("f665a0b4-3bba-4616-9683-e57c9c628d50.jpg")
     ],
-    desc: "汉南洞 (Hannam-dong) 韩餐\n📍 47 Daesagwan-ro, Yongsan-gu, Seoul\n⚠️ 谷歌评论缺失·疑似新店或仅 Naver/Kakao 收录\nNaver Map 搜 \"나주옥\" 导航更准" }
+    desc: "汉南洞 (Hannam-dong) 韩餐\n📍 47 Daesagwan-ro, Yongsan-gu, Seoul\n⚠️ 谷歌评论缺失·疑似新店或仅 Naver/Kakao 收录\nNaver Map 搜 \"나주옥\" 导航更准" },
+
+  { id: 67, name: "자연도 소금빵 Jayeondo Sogeumppang", area: "圣水洞", cat: "咖啡甜品", short: "🇰🇷圣水洞盐面包·走到路口就闻见",
+    img: IMG_SALT("5934ebc2-a918-478d-8187-a18a005be54d.jpg"),
+    imgs: [
+      IMG_SALT("5934ebc2-a918-478d-8187-a18a005be54d.jpg"),
+      IMG_SALT("713c763b-2119-48bc-a644-8b96d3d45b84.jpg"),
+      IMG_SALT("7a0c4b68-aeb5-4831-823a-902202a3c526.jpg"),
+      IMG_SALT("90eedfdd-5aed-4e2a-bfdb-9ed9c3d2e291.jpg"),
+      IMG_SALT("93098901-559c-4121-9955-ea77f642100a.jpg"),
+      IMG_SALT("9dcc8295-5d91-4dbc-b7eb-7e7df8307c77.jpg"),
+      IMG_SALT("c2d0fdf2-b162-4691-afd0-b083770c900a.jpg"),
+      IMG_SALT("ccb3b8d1-1c0d-439f-bfb7-a14ca695cc2d.jpg"),
+      IMG_SALT("e298aee2-021d-4a2d-ba08-2fd2eb58d1b1.jpg")
+    ],
+    desc: "💛 非常香！走到路口就闻见了\n面包有一点点盐味·浓郁黄油味·非常松软·空气感十足\n💚 店名 자연도 소금빵\nGoogle 搜 \"Jayeondo Sogeumppang (Salt Bread) in Seongsu\"\n📍 56-1 Yeonmujang-gil, Seongdong-gu\n❤️ 流程: 店右边点单机点面包·店员协助·拿小票到外面排队\n一袋 4 个 ≈ 12,000₩ (≈60元)\n排队 10 分钟左右·队伍可能拐到路口" }
 ];
 restaurantsRaw.push(...extra3Raw);
 
